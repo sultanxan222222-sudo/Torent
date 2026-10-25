@@ -12,7 +12,7 @@
 extern "C" int sceSystemServiceParamGetInt(int paramId, int* value);
 static const int PARAM_ID_LANG = 1;
 
-static std::string g_want = "en";     // какой файл просим: "ru" или "en"
+static std::string g_want = "ru";     // какой файл просим: "ru" или "en"
 static bool        g_loaded = false;  // true: либо загрузили, либо решили остаться на английском
 static uint64_t    g_lastTryUs = 0;
 static std::map<std::string, std::string> g_strings;
@@ -85,18 +85,18 @@ void i18n_init(const char* assetDir)
     int id = -1;
     int r = sceSystemServiceParamGetInt(PARAM_ID_LANG, &id);
     if (r != 0) id = -1;
-    std::vector<std::string> cands = lang_candidates(id);
+    std::vector<std::string> cands;
+    cands.push_back("ru"); // интерфейс всегда на русском
     logf_("i18n: system language id %d (rc 0x%08X), candidates: %s%s", id, (unsigned)r,
           cands[0].c_str(), cands.size() > 1 ? (" , " + cands[1]).c_str() : "");
 
-    // Берём первый вариант, для которого есть встроенный файл. Если файла нет ни для одного,
-    // остаётся английский по умолчанию, а на демон спросим общий код (последний в списке).
-    g_want = cands.back();
+    // Загружаем встроенный русский перевод, он работает и без службы.
+    g_want = "ru";
     bool ok = false;
     for (size_t i = 0; i < cands.size() && !ok; i++) {
         if (load_bundled(std::string(assetDir) + "/lang_" + cands[i] + ".json")) { g_want = cands[i]; ok = true; }
     }
-    logf_("i18n: using '%s', bundled file %s (%d strings)", g_want.c_str(), ok ? "loaded" : "not found, English defaults", (int)g_strings.size());
+    logf_("i18n: using '%s', bundled file %s (%d strings)", g_want.c_str(), ok ? "loaded" : "Russian file missing", (int)g_strings.size());
 }
 
 void i18n_tick(bool serverOk, uint64_t nowUs)
