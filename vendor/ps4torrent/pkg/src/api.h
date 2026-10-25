@@ -20,8 +20,7 @@ bool api_delete(const std::string& hash, bool withFiles);
 // Запустить снова можно только повторной отправкой payload.
 bool api_quit();
 
-// Добавить прямой HTTP/HTTPS .torrent URL в очередь службы; HTTP/HTTPS redirects поддерживаются.
-// Magnet-ссылки пока не поддерживаются, поскольку daemon не умеет получать metadata по infohash.
+// Добавить HTTP/HTTPS .torrent URL или magnet URI; magnet metadata resolves in the daemon.
 bool api_add_catalog_torrent(const std::string& uri, const std::string& title);
 
 // Добавить локальный .torrent из USB или памяти консоли.
