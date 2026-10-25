@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -165,10 +166,15 @@ static bool metadata_from_peer(const Peer& peer, const unsigned char infoHash[20
     const std::string extHandshake = "d1:md11:ut_metadatai3ee1:v10:PS4Torrente";
     if (!send_extended(fd, 0, extHandshake)) { close(fd); return false; }
 
+    struct timeval peerTv; peerTv.tv_sec = 2; peerTv.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &peerTv, sizeof(peerTv));
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &peerTv, sizeof(peerTv));
+
     int remoteMetadataId = -1;
+    time_t extDeadline = time(NULL) + 8;
     uint32_t metadataSize = 0;
     std::vector<unsigned char> msg;
-    for (int tries = 0; tries < 24 && remoteMetadataId < 0; ++tries) {
+    for (int tries = 0; tries < 8 && remoteMetadataId < 0 && time(NULL) < extDeadline; ++tries) {
         if (!read_message(fd, msg)) { close(fd); return false; }
         if (msg.size() < 2 || msg[0] != 20 || msg[1] != 0) continue;
         std::string payload((const char*)msg.data() + 2, msg.size() - 2);
@@ -198,7 +204,8 @@ static bool metadata_from_peer(const Peer& peer, const unsigned char infoHash[20
     }
 
     uint32_t haveCount = 0;
-    for (int tries = 0; tries < (int)(pieceCount * 4 + 24) && haveCount < pieceCount; ++tries) {
+    time_t metadataDeadline = time(NULL) + 12;
+    for (int tries = 0; tries < (int)(pieceCount * 4 + 24) && haveCount < pieceCount && time(NULL) < metadataDeadline; ++tries) {
         if (!read_message(fd, msg)) break;
         if (msg.size() < 3 || msg[0] != 20 || msg[1] != 1) continue;
         std::string payload((const char*)msg.data() + 2, msg.size() - 2);
@@ -241,21 +248,22 @@ bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
     }
 
     std::vector<std::string> trackers = magnet_values(uri, "tr");
-    std::vector<std::string> httpTrackers;
+    std::vector<std::string> usableTrackers;
     for (size_t i = 0; i < trackers.size(); ++i) {
-        if (trackers[i].compare(0, 7, "http://") == 0 &&
-            std::find(httpTrackers.begin(), httpTrackers.end(), trackers[i]) == httpTrackers.end())
-            httpTrackers.push_back(trackers[i]);
+        bool supported = trackers[i].compare(0, 7, "http://") == 0 ||
+                         trackers[i].compare(0, 6, "udp://") == 0;
+        if (supported && std::find(usableTrackers.begin(), usableTrackers.end(), trackers[i]) == usableTrackers.end())
+            usableTrackers.push_back(trackers[i]);
     }
-    if (httpTrackers.empty()) {
-        error = "this build needs an HTTP tracker in the magnet URI (udp trackers and DHT are not implemented yet)";
+    if (usableTrackers.empty()) {
+        error = "magnet has no supported HTTP/UDP tracker; DHT discovery is not implemented yet";
         return false;
     }
 
     std::vector<Peer> peers;
-    for (size_t i = 0; i < httpTrackers.size() && i < 8 && peers.size() < 80; ++i) {
+    for (size_t i = 0; i < usableTrackers.size() && i < 4 && peers.size() < 80; ++i) {
         AnnounceResult ar;
-        if (!tracker_announce_http(httpTrackers[i], infoHash, peerId, 1, ar)) {
+        if (!tracker_announce(usableTrackers[i], infoHash, peerId, 1, ar)) {
             logf_("magnet: tracker failed: %s", ar.error.c_str());
             continue;
         }
@@ -272,9 +280,9 @@ bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
     }
 
     std::string info;
-    for (size_t i = 0; i < peers.size() && i < 24; ++i) {
+    for (size_t i = 0; i < peers.size() && i < 10; ++i) {
         if (metadata_from_peer(peers[i], infoHash, peerId, info)) {
-            std::string announce = httpTrackers[0];
+            std::string announce = usableTrackers[0];
             torrentBytes = "d8:announce" + std::to_string(announce.size()) + ":" + announce +
                            "4:info" + info + "e";
             error.clear();
