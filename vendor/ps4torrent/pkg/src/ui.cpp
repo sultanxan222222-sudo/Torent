@@ -14,6 +14,8 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <dirent.h>
+#include <strings.h>
 
 #include <orbis/Pad.h>
 #include <orbis/UserService.h>
@@ -80,9 +82,16 @@ static Image    g_banner;
 static bool     g_bannerOk = false;
 static int      g_bannerW  = 0;   // ширина на экране при высоте BANNER_H (с сохранением пропорций)
 static uint64_t g_lastRefresh = 0;
-static int g_view = 0; // 0 = downloads, 1 = catalog
+static int g_view = 0; // 0 = downloads, 1 = catalog, 2 = add menu, 3 = local file list, 4 = URL keyboard
 static int g_catalogSel = 0;
 static std::string g_catalogNotice = "Выбери прямой HTTP .torrent URL из своего каталога";
+static int g_addSel = 0;
+static int g_fileSel = 0;
+static std::vector<std::string> g_filePaths;
+static std::string g_fileNotice;
+static std::string g_urlText;
+static int g_urlKeyPos = 0;
+static const std::string g_urlKeys = "abcdefghijklmnopqrstuvwxyz0123456789:/.-_?&=%";
 
 enum Modal { MODAL_NONE, MODAL_DELETE, MODAL_QUIT };
 static Modal        g_modal = MODAL_NONE;
@@ -596,9 +605,90 @@ static void draw_catalog_screen()
     put_center(FRAME_WIDTH / 2, "PS4 Torrent Catalog — каталог и загрузки", 1052, C_DIMMER, C_BG);
 }
 
+ 
+static void scan_torrent_dir(const std::string& root)
+{
+    DIR* d = opendir(root.c_str());
+    if (!d) return;
+    struct dirent* e;
+    while ((e = readdir(d)) != NULL) {
+        if (!e->d_name || e->d_name[0] == '.') continue;
+        size_t n = strlen(e->d_name);
+        if (n < 8 || strcasecmp(e->d_name + n - 8, ".torrent") != 0) continue;
+        g_filePaths.push_back(root + "/" + e->d_name);
+    }
+    closedir(d);
+}
+static void load_torrent_files(bool usb)
+{
+    g_filePaths.clear(); g_fileSel = 0;
+    if (usb) {
+        for (int i = 0; i < 8; ++i) scan_torrent_dir("/mnt/usb" + std::to_string(i));
+    } else {
+        scan_torrent_dir("/data/pkg/torrents");
+        scan_torrent_dir("/data/ps4tc_client");
+    }
+    g_fileNotice = g_filePaths.empty()
+        ? (usb ? "На корне подключённых USB-накопителей .torrent не найден" : "Во внутренней памяти .torrent не найден")
+        : "Выбери файл и нажми X — добавить; O — назад";
+}
+static void draw_add_screen()
+{
+    g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
+    draw_text("ДОБАВИТЬ ТОРРЕНТ", MARGIN_X, 75, C_TEXT, C_BG);
+    draw_text("Вверх/вниз — выбор   X — открыть   O — назад", MARGIN_X, 125, C_DIM, C_BG);
+    const char* labels[] = {"С USB-флешки", "Из памяти консоли", "Из интернета — ввести HTTP-ссылку", "Открыть каталог источников"};
+    for (int i = 0; i < 4; ++i) {
+        int y = 240 + i * 105;
+        Color bg = i == g_addSel ? C_SEL : (i % 2 ? C_ROW2 : C_BG);
+        g_scene->FillRect(MARGIN_X - 8, y - 35, FRAME_WIDTH - 2 * MARGIN_X + 16, 76, bg);
+        draw_text(labels[i], MARGIN_X, y + 8, C_TEXT, bg);
+    }
+    draw_text("Добавленные торренты появятся в основном списке загрузок.", MARGIN_X, 760, C_DIM, C_BG);
+}
+static void draw_file_screen()
+{
+    g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
+    draw_text("ВЫБОР TORRENT-ФАЙЛА", MARGIN_X, 75, C_TEXT, C_BG);
+    draw_text("Вверх/вниз — выбор   X — добавить в очередь   O — назад", MARGIN_X, 125, C_DIM, C_BG);
+    if (g_filePaths.empty()) {
+        draw_text(fit(g_fileNotice, 100), MARGIN_X, 250, C_AMBER, C_BG);
+    } else {
+        int top = (g_fileSel / 14) * 14;
+        for (int i = top; i < (int)g_filePaths.size() && i < top + 14; ++i) {
+            int y = 175 + (i - top) * 54;
+            Color bg = i == g_fileSel ? C_SEL : (i % 2 ? C_ROW2 : C_BG);
+            g_scene->FillRect(MARGIN_X - 8, y - 25, FRAME_WIDTH - 2 * MARGIN_X + 16, 44, bg);
+            draw_text(fit(g_filePaths[i], 105), MARGIN_X, y + 5, C_TEXT, bg);
+        }
+        draw_text("Файлов: " + std::to_string(g_filePaths.size()), MARGIN_X, 960, C_TEXT, C_BG);
+    }
+    draw_text(fit(g_fileNotice, 112), MARGIN_X, 1000, C_AMBER, C_BG);
+}
+static void draw_url_screen()
+{
+    g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
+    draw_text("ТОРРЕНТ ПО ССЫЛКЕ", MARGIN_X, 75, C_TEXT, C_BG);
+    draw_text("Ввод с геймпада: X — символ, □ — стереть, △ — добавить", MARGIN_X, 125, C_DIM, C_BG);
+    draw_text(fit(g_urlText, 112), MARGIN_X, 205, C_TEXT, C_BG);
+    const int cols = 9, cellW = 150, cellH = 85, startX = 210, startY = 310;
+    for (int i = 0; i < (int)g_urlKeys.size(); ++i) {
+        int x = startX + (i % cols) * cellW;
+        int y = startY + (i / cols) * cellH;
+        Color bg = i == g_urlKeyPos ? C_SEL : C_PANEL;
+        g_scene->FillRect(x, y, cellW - 8, cellH - 8, bg);
+        draw_text(std::string(1, g_urlKeys[(size_t)i]), x + 55, y + 48, C_TEXT, bg);
+    }
+    draw_text("OPTIONS — добавить ссылку    O — назад", MARGIN_X, 970, C_DIM, C_BG);
+    draw_text("Поддерживается прямая HTTP-ссылка на .torrent; HTTPS и magnet пока не поддерживаются.", MARGIN_X, 1010, C_AMBER, C_BG);
+}
+
 static void draw_all()
 {
     if (g_view == 1) { draw_catalog_screen(); return; }
+    if (g_view == 2) { draw_add_screen(); return; }
+    if (g_view == 3) { draw_file_screen(); return; }
+    if (g_view == 4) { draw_url_screen(); return; }
     g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
 
     int statusX;
@@ -900,17 +990,59 @@ void ui_pump()
     bool square   = (pressed & ORBIS_PAD_BUTTON_SQUARE) != 0;
     bool options  = (pressed & ORBIS_PAD_BUTTON_OPTIONS) != 0;
     bool r1       = (pressed & ORBIS_PAD_BUTTON_R1) != 0;
+    bool l1       = (pressed & ORBIS_PAD_BUTTON_L1) != 0;
+    bool left     = (pressed & ORBIS_PAD_BUTTON_LEFT) != 0;
+    bool right    = (pressed & ORBIS_PAD_BUTTON_RIGHT) != 0;
 
     static uint64_t upSince = 0, upLast = 0, downSince = 0, downLast = 0;
 
     int n = (int)g_status.items.size();
 
-    if (r1 && g_modal == MODAL_NONE) {
+    if (l1 && g_modal == MODAL_NONE && g_view == 0) { g_view = 2; g_addSel = 0; g_redraw = 2; }
+    if (r1 && g_modal == MODAL_NONE && (g_view == 0 || g_view == 1)) {
         g_view = g_view == 0 ? 1 : 0;
         g_redraw = 2;
     }
 
-    if (g_view == 1 && g_modal == MODAL_NONE) {
+    if (g_view == 2 && g_modal == MODAL_NONE) {
+        if (step_repeat(up, upSince, upLast, now) && g_addSel > 0) { g_addSel--; g_redraw = 2; }
+        if (step_repeat(down, downSince, downLast, now) && g_addSel < 3) { g_addSel++; g_redraw = 2; }
+        if (cross) {
+            if (g_addSel == 0) { load_torrent_files(true); g_view = 3; }
+            else if (g_addSel == 1) { load_torrent_files(false); g_view = 3; }
+            else if (g_addSel == 2) { g_urlText.clear(); g_urlKeyPos = 0; g_view = 4; }
+            else { g_view = 1; }
+            g_redraw = 2;
+        }
+        if (circle) { g_view = 0; g_redraw = 2; }
+    } else if (g_view == 3 && g_modal == MODAL_NONE) {
+        if (step_repeat(up, upSince, upLast, now) && g_fileSel > 0) { g_fileSel--; g_redraw = 2; }
+        if (step_repeat(down, downSince, downLast, now) && g_fileSel + 1 < (int)g_filePaths.size()) { g_fileSel++; g_redraw = 2; }
+        if (cross && g_fileSel >= 0 && g_fileSel < (int)g_filePaths.size()) {
+            if (api_add_torrent_file(g_filePaths[g_fileSel])) {
+                g_fileNotice = "Передано службе загрузки: " + g_filePaths[g_fileSel];
+                refresh_status();
+            } else g_fileNotice = "Ошибка: " + api_last_error();
+            g_redraw = 2;
+        }
+        if (circle) { g_view = 2; g_redraw = 2; }
+    } else if (g_view == 4 && g_modal == MODAL_NONE) {
+        const int cols = 9;
+        if (left && g_urlKeyPos > 0) { g_urlKeyPos--; g_redraw = 2; }
+        if (right && g_urlKeyPos + 1 < (int)g_urlKeys.size()) { g_urlKeyPos++; g_redraw = 2; }
+        if (step_repeat(up, upSince, upLast, now) && g_urlKeyPos >= cols) { g_urlKeyPos -= cols; g_redraw = 2; }
+        if (step_repeat(down, downSince, downLast, now) && g_urlKeyPos + cols < (int)g_urlKeys.size()) { g_urlKeyPos += cols; g_redraw = 2; }
+        if (cross && g_urlText.size() < 500) { g_urlText += g_urlKeys[(size_t)g_urlKeyPos]; g_redraw = 2; }
+        if (square && !g_urlText.empty()) { g_urlText.erase(g_urlText.size()-1); g_redraw = 2; }
+        if (triangle || options) {
+            if (api_add_catalog_torrent(g_urlText, "internet-download")) {
+                g_catalogNotice = "Передано службе загрузки: internet-download";
+                refresh_status(); g_view = 0;
+            } else g_fileNotice = "Ошибка: " + api_last_error();
+            g_redraw = 2;
+        }
+        if (circle) { g_view = 2; g_redraw = 2; }
+    } else if (g_view == 1 && g_modal == MODAL_NONE) {
         const std::vector<CatalogEntry>& catalog = catalog_items();
         if (step_repeat(up, upSince, upLast, now) && g_catalogSel > 0) {
             g_catalogSel--; g_redraw = 2;
