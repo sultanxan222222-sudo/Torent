@@ -283,8 +283,16 @@ bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
     for (size_t i = 0; i < peers.size() && i < 10; ++i) {
         if (metadata_from_peer(peers[i], infoHash, peerId, info)) {
             std::string announce = usableTrackers[0];
-            torrentBytes = "d8:announce" + std::to_string(announce.size()) + ":" + announce +
-                           "4:info" + info + "e";
+            torrentBytes = "d8:announce" + std::to_string(announce.size()) + ":" + announce;
+            if (usableTrackers.size() > 1) {
+                torrentBytes += "13:announce-listl";
+                for (size_t ti = 0; ti < usableTrackers.size(); ++ti) {
+                    torrentBytes += "l" + std::to_string(usableTrackers[ti].size()) +
+                                    ":" + usableTrackers[ti] + "e";
+                }
+                torrentBytes += "e";
+            }
+            torrentBytes += "4:info" + info + "e";
             error.clear();
             logf_("magnet: metadata resolved from peer %u.%u.%u.%u:%u (%u bytes)",
                   peers[i].ip[0], peers[i].ip[1], peers[i].ip[2], peers[i].ip[3],
