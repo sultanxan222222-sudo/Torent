@@ -591,8 +591,7 @@ static void draw_catalog_screen()
         draw_text("Элементов: " + std::to_string(items.size()) +
                   "   |   Выбран: " + fit(items[g_catalogSel].title, 45),
                   MARGIN_X, 930, C_TEXT, C_BG);
-        draw_text("✕ добавляет прямой HTTP .torrent на HDD; magnet/HTTPS пока не поддерживаются.",
-                  MARGIN_X, 972, C_AMBER, C_BG);
+        draw_text(fit(g_catalogNotice, 112), MARGIN_X, 972, C_AMBER, C_BG);
     }
     put_center(FRAME_WIDTH / 2, "PS4 Torrent Catalog — каталог и загрузки", 1052, C_DIMMER, C_BG);
 }
