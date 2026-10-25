@@ -2,7 +2,7 @@
 #include <string>
 #include <stdint.h>
 
-// Resolve a BitTorrent v1 magnet using HTTP trackers and BEP 10 / ut_metadata peers.
-// Returns a complete bencoded .torrent payload only after verifying the info-hash.
+// Resolve BitTorrent v1 magnets using HTTP/UDP trackers and IPv4 DHT (BEP 5),
+// then obtain BEP 10/ut_metadata pieces and verify the info-hash.
 bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
                     std::string& torrentBytes, std::string& error);
