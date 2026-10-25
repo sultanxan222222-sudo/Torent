@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "title": "Example Catalog",
+  "items": [
+    {
+      "id": "sample-homebrew-demo",
+      "title": "Homebrew Demo",
+      "description": "Example entry used to validate catalog parsing.",
+      "category": "Homebrew",
+      "platform": "PS4",
+      "cover": "",
+      "source": {
+        "type": "magnet",
+        "uri": "magnet:?xt=urn:btih:REPLACE_WITH_VALID_TEST_HASH"
+      },
+      "content_rights": "operator-authorized"
+    }
+  ]
+}
