@@ -89,6 +89,7 @@ static std::string g_catalogNotice = "Выбери прямой HTTP .torrent UR
 static int g_addSel = 0;
 static int g_fileSel = 0;
 static std::vector<std::string> g_filePaths;
+static int g_scanDirs = 0;
 static std::string g_fileNotice;
 static std::string g_urlText;
 static int g_urlKeyPos = 0;
@@ -611,8 +612,9 @@ static void draw_catalog_screen()
 // Ограничения глубины/числа файлов защищают меню от обхода бесконечных деревьев.
 static void scan_torrent_dir(const std::string& root, int depth = 0)
 {
-    if (g_filePaths.size() >= 500 || depth > 7) return;
+    if (g_filePaths.size() >= 500 || depth > 7 || g_scanDirs >= 3000) return;
     DIR* d = opendir(root.c_str());
+    if (d) ++g_scanDirs;
     if (!d) return;
     struct dirent* e;
     while ((e = readdir(d)) != NULL && g_filePaths.size() < 500) {
@@ -634,7 +636,7 @@ static void scan_torrent_dir(const std::string& root, int depth = 0)
 }
 static void load_torrent_files(bool usb)
 {
-    g_filePaths.clear(); g_fileSel = 0;
+    g_filePaths.clear(); g_fileSel = 0; g_scanDirs = 0;
     if (usb) {
         for (int i = 0; i < 8 && g_filePaths.size() < 500; ++i) scan_torrent_dir("/mnt/usb" + std::to_string(i));
     } else {
@@ -695,7 +697,7 @@ static void draw_url_screen()
     }
     draw_text("OPTIONS — добавить ссылку    O — назад", MARGIN_X, 970, C_DIM, C_BG);
     draw_text(fit(g_fileNotice, 112), MARGIN_X, 930, C_AMBER, C_BG);
-    draw_text("HTTP .torrent; HTTPS и magnet пока не поддерживаются.", MARGIN_X, 1010, C_AMBER, C_BG);
+    draw_text("HTTP .torrent и перенаправления; HTTPS и magnet пока не поддерживаются.", MARGIN_X, 1010, C_AMBER, C_BG);
 }
 
 static void draw_all()
