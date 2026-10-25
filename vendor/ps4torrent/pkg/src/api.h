@@ -20,5 +20,9 @@ bool api_delete(const std::string& hash, bool withFiles);
 // Запустить снова можно только повторной отправкой payload.
 bool api_quit();
 
+// Добавить прямой HTTP .torrent URL из каталога в очередь службы.
+// HTTPS, magnet-ссылки и HTTP-перенаправления пока не поддерживаются.
+bool api_add_catalog_torrent(const std::string& uri, const std::string& title);
+
 // Последняя ошибка от сервера (для подсказки на экране), пусто если её не было.
 std::string api_last_error();
