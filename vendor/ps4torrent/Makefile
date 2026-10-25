@@ -1,4 +1,5 @@
 # ps4torrentd: сборка под ps4-payload-sdk
+# Включает DHT BEP 5 для поиска пиров по magnet без обязательного tracker URL.
 PS4_HOST ?= 192.168.0.24
 PS4_PORT ?= 9090
 
