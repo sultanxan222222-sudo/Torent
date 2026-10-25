@@ -16,3 +16,20 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Validate example catalog
         run: python scripts/validate_catalog.py catalog/catalog.example.json
+      - name: Check vendored PS4 build inputs
+        run: |
+          test -s vendor/ps4torrent/Makefile
+          test -s vendor/ps4torrent/main.cpp
+          test -s vendor/ps4torrent/pkg/Makefile
+          test -s vendor/ps4torrent/pkg/src/ui.cpp
+          test -s vendor/ps4torrent/pkg/assets/fonts/DejaVuSansMono.ttf
+          test -s vendor/ps4torrent/pkg/assets/misc/lang_ru.json
+          test -s vendor/ps4torrent/assets/favicon.ico
+          test -s vendor/ps4torrent/assets/title.png
+          test -s vendor/ps4torrent/assets/notify64.png
+      - name: Verify language asset generator
+        working-directory: vendor/ps4torrent
+        run: |
+          sh ./mklang.sh
+          test -s lang_gen.cpp
+          test -s lang_gen.S
