@@ -24,6 +24,7 @@ jobs:
           test -s vendor/ps4torrent/pkg/src/ui.cpp
           test -s vendor/ps4torrent/pkg/assets/fonts/DejaVuSansMono.ttf
           test -s vendor/ps4torrent/pkg/assets/misc/lang_ru.json
+          test -s vendor/ps4torrent/pkg/assets/misc/catalog.json
           test -s vendor/ps4torrent/assets/favicon.ico
           test -s vendor/ps4torrent/assets/title.png
           test -s vendor/ps4torrent/assets/notify64.png
