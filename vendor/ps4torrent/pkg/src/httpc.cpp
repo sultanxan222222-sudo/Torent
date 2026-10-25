@@ -87,9 +87,9 @@ static bool https_init()
     if (g_httpsHttpCtx >= 0) return true;
     if (g_httpsInitTried) return false;
     g_httpsInitTried = true;
-    if (sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 ||
-        sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_HTTP) < 0 ||
-        sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SSL) < 0) return false;
+    if ((int32_t)sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_NET) < 0 ||
+        (int32_t)sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_HTTP) < 0 ||
+        (int32_t)sceSysmoduleLoadModuleInternal(ORBIS_SYSMODULE_INTERNAL_SSL) < 0) return false;
     if (sceNetInit() < 0) return false;
     g_httpsNetPool = sceNetPoolCreate("torentHttpPool", 16 * 1024, 0);
     if (g_httpsNetPool < 0) return false;
