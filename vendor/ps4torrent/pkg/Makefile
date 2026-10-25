@@ -24,7 +24,7 @@ APPVER      := $(shell sed -n 's/.*APP_VERSION "\(.*\)".*/\1/p' ../version.h)
 
 # Всё, что кладётся в PKG (/app0/assets/...). ELF службы копируется сюда из ../release (см. ниже).
 ASSETS      := assets/fonts/DejaVuSansMono.ttf assets/fonts/LICENSE-DejaVu.txt assets/images/title.png \
-               assets/misc/lang_en.json assets/misc/lang_ru.json assets/misc/ps4torrentd.elf
+               assets/misc/lang_en.json assets/misc/lang_ru.json assets/misc/catalog.json assets/misc/ps4torrentd.elf
 
 # Системные модули для приложения (без libc.prx приложение сразу вылетает). Берутся из набора OpenOrbis.
 LIBMODULES  := sce_module/libc.prx sce_module/libSceFios2.prx
