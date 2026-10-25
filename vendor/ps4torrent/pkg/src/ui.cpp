@@ -684,7 +684,7 @@ static void draw_all()
     if (g_svc == SVC_FAILED)  hint = "{cross} " + tr("tc_hint_retry", "try again");
     else if (svcDown)         hint = "{cross} " + tr("tc_hint_start", "start the service");
     else if (g_svc == SVC_READY)
-        hint = "{updown} " + tr("tc_hint_select", "select") + "   {cross} " + tr("tc_hint_toggle", "pause/resume") + "   {triangle} " + tr("tc_hint_remove", "remove") + "   {options} " + tr("btn_quit", "shut down");
+        hint = "{updown} " + tr("tc_hint_select", "select") + "   {cross} " + tr("tc_hint_toggle", "pause/resume") + "   {triangle} " + tr("tc_hint_remove", "remove") + "   R1: catalog   {options} " + tr("btn_quit", "shut down");
     if (!hint.empty()) put_center_rich(FRAME_WIDTH / 2, hint, HINT_BASELINE, C_DIM, C_BG);
 
     put_center(FRAME_WIDTH / 2, "ps4torrent client v" APP_VERSION " Created by SergioPoverony and Mr.Claude",
