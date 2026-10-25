@@ -66,6 +66,18 @@ jobs:
           fi
           echo "PS4_PAYLOAD_SDK=/opt/ps4-payload-sdk" >> "$GITHUB_ENV"
 
+      - name: Install legacy OpenSSL compatibility for PkgTool
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! ldconfig -p | grep -q 'libssl.so.1.1'; then
+            curl -fL --retry 3 \
+              https://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb \
+              -o "$RUNNER_TEMP/libssl1.1.deb"
+            sudo apt-get install -y "$RUNNER_TEMP/libssl1.1.deb"
+          fi
+          ldconfig -p | grep 'libssl.so.1.1'
+
       - name: Build daemon and PKG
         shell: bash
         run: |
