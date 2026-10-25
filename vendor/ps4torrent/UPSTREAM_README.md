@@ -1,0 +1,42 @@
+# ps4torrent
+Torrent client for PS4 under (jalibrake)
+
+The main component is the torrent payload. It runs in the background and is managed via a web interface on port 8787.
+
+Supports adding torrents, activation, and resuming downloads.
+The payload is operational and can be set to launch automatically on startup.
+All downloading and processing take place on removable media (USB drive or HDD).
+
+/mnt/usbN/torrents/             Place .torrent files here (only this level is scanned)
+/mnt/usbN/torrents/downloads/   Downloads go here
+/mnt/usbN/torrents/complete/    .torrent files are moved here upon completion
+/mnt/usbN/torrents/.state/      System data: download progress (to persist across restarts)
+
+## Build
+
+Needs [ps4-payload-dev/sdk](https://github.com/ps4-payload-dev/sdk) (with libc++ built via its `libcxx.sh`).
+
+    export PS4_PAYLOAD_SDK=/path/to/sdk
+    make
+    # send to the console (GoldHEN payload loader, port 9090):
+    $PS4_PAYLOAD_SDK/bin/orbis-deploy -h <PS4 IP> -p 9090 ps4torrentd.elf
+
+A prebuilt payload is in `release/ps4torrentd.elf`. After it starts, open `http://<PS4 IP>:8787/`.
+
+## PKG app
+
+`pkg/` holds the on-screen PKG app (OpenOrbis, gamepad). It checks the service on launch and, if it is missing or a different version, installs it into GoldHEN autorun and sends it to BinLoader (port 9090). Build: `cd pkg; make full` (needs `OO_PS4_TOOLCHAIN` and `PS4_PAYLOAD_SDK`). The app and the service share one version (`version.h`).
+
+## Documentation
+
+* `docs/README_ru.md` - full user guide and API (Russian)
+* `docs/HANDOFF.md` - developer notes: architecture, decisions, how to continue (Russian)
+* `tests/` - PC test suites (see `tests/README_TESTS.md`)
+
+## License
+
+Copyright (C) 2026 SergioPoverony and Mr.Claude.
+
+Licensed under the GNU General Public License v3.0 (see `LICENSE`). Anyone may use, modify and redistribute it; the copyright notice must be kept, and modified versions must be released under the same license with source code.
+
+Created by SergioPoverony and Mr.Claude.
