@@ -14,3 +14,6 @@ HttpResult http_get(const std::string& host, int port, const std::string& path, 
 // POST host:port/path с телом body (Content-Type: application/octet-stream).
 HttpResult http_post(const std::string& host, int port, const std::string& path,
                      const std::string& body, int timeout_ms);
+
+// Native PS4 HTTP stack for HTTPS URLs (certificate verification left enabled).
+HttpResult http_get_secure_url(const std::string& url, int timeout_ms);
