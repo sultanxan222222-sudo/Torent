@@ -680,7 +680,8 @@ static void draw_url_screen()
         draw_text(std::string(1, g_urlKeys[(size_t)i]), x + 55, y + 48, C_TEXT, bg);
     }
     draw_text("OPTIONS — добавить ссылку    O — назад", MARGIN_X, 970, C_DIM, C_BG);
-    draw_text("Поддерживается прямая HTTP-ссылка на .torrent; HTTPS и magnet пока не поддерживаются.", MARGIN_X, 1010, C_AMBER, C_BG);
+    draw_text(fit(g_fileNotice, 112), MARGIN_X, 930, C_AMBER, C_BG);
+    draw_text("HTTP .torrent; HTTPS и magnet пока не поддерживаются.", MARGIN_X, 1010, C_AMBER, C_BG);
 }
 
 static void draw_all()
@@ -1010,7 +1011,7 @@ void ui_pump()
         if (cross) {
             if (g_addSel == 0) { load_torrent_files(true); g_view = 3; }
             else if (g_addSel == 1) { load_torrent_files(false); g_view = 3; }
-            else if (g_addSel == 2) { g_urlText.clear(); g_urlKeyPos = 0; g_view = 4; }
+            else if (g_addSel == 2) { g_urlText.clear(); g_fileNotice.clear(); g_urlKeyPos = 0; g_view = 4; }
             else { g_view = 1; }
             g_redraw = 2;
         }
