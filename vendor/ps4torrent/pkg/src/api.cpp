@@ -129,11 +129,14 @@ static std::string query_encode(const std::string& s)
     return out;
 }
 
-static bool parse_http_url(const std::string& uri, std::string& host, int& port, std::string& path)
+static bool parse_http_url(const std::string& uri, std::string& host, int& port, std::string& path, bool& secure)
 {
-    const std::string prefix = "http://";
-    if (uri.compare(0, prefix.size(), prefix) != 0) return false;
-    std::string rest = uri.substr(prefix.size());
+    size_t prefixLen = 0;
+    secure = false;
+    if (uri.compare(0, 7, "http://") == 0) prefixLen = 7;
+    else if (uri.compare(0, 8, "https://") == 0) { prefixLen = 8; secure = true; }
+    else return false;
+    std::string rest = uri.substr(prefixLen);
     size_t cut = rest.find_first_of("/?#");
     std::string hostPort = cut == std::string::npos ? rest : rest.substr(0, cut);
     path = cut == std::string::npos ? "/" : rest.substr(cut);
@@ -142,7 +145,7 @@ static bool parse_http_url(const std::string& uri, std::string& host, int& port,
     size_t fragment = path.find('#');
     if (fragment != std::string::npos) path.erase(fragment);
     if (hostPort.empty() || hostPort.find('@') != std::string::npos || hostPort.find(' ') != std::string::npos) return false;
-    port = 80;
+    port = secure ? 443 : 80;
     host = hostPort;
     size_t colon = hostPort.rfind(':');
     if (colon != std::string::npos) {
@@ -182,42 +185,35 @@ bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
         g_lastErr = "magnet links need metadata exchange, which this daemon does not implement yet";
         return false;
     }
-    if (uri.compare(0, 8, "https://") == 0) {
-        g_lastErr = "HTTPS transport is not yet implemented in this PS4 build";
-        return false;
-    }
     std::string current = uri, remoteHost, remotePath;
     int remotePort = 80;
+    bool remoteSecure = false;
     HttpResult remote;
     bool gotFile = false;
     for (int redirects = 0; redirects <= 5; ++redirects) {
-        if (!parse_http_url(current, remoteHost, remotePort, remotePath)) {
-            g_lastErr = "invalid URL (only http:// URLs are currently supported)";
+        if (!parse_http_url(current, remoteHost, remotePort, remotePath, remoteSecure)) {
+            g_lastErr = "invalid URL (use http:// or https://)";
             return false;
         }
-        remote = http_get(remoteHost, remotePort, remotePath, 15000);
+        remote = remoteSecure ? http_get_secure_url(current, 15000) : http_get(remoteHost, remotePort, remotePath, 15000);
         if (!remote.connected) { g_lastErr = "cannot connect to URL host"; return false; }
         if (remote.status == 301 || remote.status == 302 || remote.status == 303 ||
             remote.status == 307 || remote.status == 308) {
             std::string loc = header_value(remote.headers, "location");
             if (loc.empty()) { g_lastErr = "HTTP redirect has no Location header"; return false; }
             if (loc.compare(0, 7, "http://") == 0 || loc.compare(0, 8, "https://") == 0) {
-                if (loc.compare(0, 8, "https://") == 0) {
-                    g_lastErr = "server redirected to HTTPS, but HTTPS transport is not yet implemented";
-                    return false;
-                }
                 current = loc;
             } else if (loc[0] == '/') {
-                current = "http://" + remoteHost;
-                if (remotePort != 80) current += ":" + std::to_string(remotePort);
+                current = remoteSecure ? "https://" + remoteHost : "http://" + remoteHost;
+                if (remotePort != (remoteSecure ? 443 : 80)) current += ":" + std::to_string(remotePort);
                 current += loc;
             } else {
                 size_t slash = remotePath.find('?');
                 std::string base = slash == std::string::npos ? remotePath : remotePath.substr(0, slash);
                 size_t last = base.find_last_of('/');
                 base = last == std::string::npos ? "/" : base.substr(0, last + 1);
-                current = "http://" + remoteHost;
-                if (remotePort != 80) current += ":" + std::to_string(remotePort);
+                current = remoteSecure ? "https://" + remoteHost : "http://" + remoteHost;
+                if (remotePort != (remoteSecure ? 443 : 80)) current += ":" + std::to_string(remotePort);
                 current += base + loc;
             }
             continue;
