@@ -182,8 +182,21 @@ static std::string header_value(const std::string& headers, const std::string& w
 bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
 {
     if (uri.compare(0, 8, "magnet:?") == 0) {
-        g_lastErr = "magnet links need metadata exchange, which this daemon does not implement yet";
-        return false;
+        HttpResult local = http_post(g_host, g_port,
+            with_token("/api/magnet?uri=" + query_encode(uri)), "", 180000);
+        if (!local.connected) {
+            g_lastErr = "connection lost while resolving magnet metadata";
+            return false;
+        }
+        JsonValue response;
+        if (!json_parse(local.body, response) || response.type != JsonValue::OBJ || !response["ok"].asBool(false)) {
+            g_lastErr = response.type == JsonValue::OBJ
+                ? response["error"].asStr("magnet metadata resolution failed")
+                : ("daemon returned HTTP " + std::to_string(local.status));
+            return false;
+        }
+        g_lastErr.clear();
+        return true;
     }
     std::string current = uri, remoteHost, remotePath;
     int remotePort = 80;
