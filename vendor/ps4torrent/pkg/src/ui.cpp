@@ -82,6 +82,7 @@ static int      g_bannerW  = 0;   // ширина на экране при вы�
 static uint64_t g_lastRefresh = 0;
 static int g_view = 0; // 0 = downloads, 1 = catalog
 static int g_catalogSel = 0;
+static std::string g_catalogNotice = "Выбери прямой HTTP .torrent URL из своего каталога";
 
 enum Modal { MODAL_NONE, MODAL_DELETE, MODAL_QUIT };
 static Modal        g_modal = MODAL_NONE;
@@ -921,11 +922,14 @@ void ui_pump()
         if (cross && g_catalogSel >= 0 && g_catalogSel < (int)catalog.size()) {
             const CatalogEntry& entry = catalog[g_catalogSel];
             if (entry.sourceType != "torrent_url") {
+                g_catalogNotice = "Этот источник пока не поддерживается: " + entry.sourceType;
                 logf_("catalog: unsupported source type '%s' for '%s'", entry.sourceType.c_str(), entry.title.c_str());
             } else if (api_add_catalog_torrent(entry.sourceUri, entry.title)) {
+                g_catalogNotice = "Передано службе: " + entry.title;
                 logf_("catalog: torrent submitted: %s", entry.title.c_str());
                 refresh_status();
             } else {
+                g_catalogNotice = "Ошибка: " + api_last_error();
                 logf_("catalog: failed to add '%s': %s", entry.title.c_str(), api_last_error().c_str());
             }
             g_redraw = 2;
