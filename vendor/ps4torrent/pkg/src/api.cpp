@@ -191,4 +191,43 @@ bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
     return true;
 }
 
+
+bool api_add_torrent_file(const std::string& path)
+{
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) { g_lastErr = "cannot open .torrent file"; return false; }
+    std::string body;
+    char buf[4096];
+    size_t n = 0;
+    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
+        if (body.size() + n > 1024 * 1024) {
+            fclose(f); g_lastErr = "torrent file exceeds 1 MiB limit"; return false;
+        }
+        body.append(buf, n);
+    }
+    bool readOk = !ferror(f);
+    fclose(f);
+    if (!readOk || body.empty() || body[0] != 'd' || body.find("4:info") == std::string::npos) {
+        g_lastErr = "file is not a valid .torrent file";
+        return false;
+    }
+    size_t slash = path.find_last_of('/');
+    std::string name = slash == std::string::npos ? path : path.substr(slash + 1);
+    if (name.empty()) name = "local.torrent";
+    std::string postPath = "/api/add?name=" + query_encode(name) + "&drive=internal&start=1";
+    HttpResult local = http_post(g_host, g_port, with_token(postPath), body, 10000);
+    if (!local.connected || local.status != 200) {
+        g_lastErr = !local.connected ? "cannot send torrent to ps4torrentd" :
+                    ("ps4torrentd returned HTTP " + std::to_string(local.status));
+        return false;
+    }
+    JsonValue response;
+    if (!json_parse(local.body, response) || response.type != JsonValue::OBJ || !response["ok"].asBool(false)) {
+        g_lastErr = response.type == JsonValue::OBJ ? response["error"].asStr("daemon rejected torrent") : "daemon returned invalid JSON";
+        return false;
+    }
+    g_lastErr.clear();
+    return true;
+}
+
 std::string api_last_error() { return g_lastErr; }
