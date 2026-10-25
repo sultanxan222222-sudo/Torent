@@ -6,7 +6,8 @@
 - [x] Add JSON/schema validation workflow.
 - [x] Identify the upstream daemon and review its documented API and GPL-3.0 license.
 - [x] Record documented status, pause/resume, add-torrent, delete, and config routes.
-- [ ] Pin upstream daemon source revision and inspect implementation of every API route.
+- [x] Pin upstream client source snapshot to `cf8699046a9711e98cd640982aa18fc00fa88c09` and preserve its GPL license notice.
+- [ ] Inspect implementation of every daemon API route against the pinned source.
 
 ## Stage 1 — Integration proof
 - [ ] Build a small daemon API probe for the supported PS4 environment.
