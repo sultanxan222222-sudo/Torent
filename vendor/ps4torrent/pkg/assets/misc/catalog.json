@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "title": "PS4 Torrent Catalog — local example",
+  "items": [
+    {
+      "id": "homebrew-demo",
+      "title": "Homebrew Demo Entry",
+      "description": "Example catalog item. Replace this feed with entries for content you are authorized to distribute.",
+      "category": "Homebrew",
+      "platform": "PS4",
+      "cover": "",
+      "source": {
+        "type": "torrent_url",
+        "uri": "https://example.invalid/homebrew-demo.torrent"
+      },
+      "content_rights": "operator-authorized"
+    },
+    {
+      "id": "linux-test-image",
+      "title": "Linux Test Image",
+      "description": "Second placeholder entry for testing catalog navigation.",
+      "category": "Utilities",
+      "platform": "PS4",
+      "cover": "",
+      "source": {
+        "type": "magnet",
+        "uri": "magnet:?xt=urn:btih:REPLACE_WITH_VALID_TEST_HASH"
+      },
+      "content_rights": "operator-authorized"
+    }
+  ]
+}
