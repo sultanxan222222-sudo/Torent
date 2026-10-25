@@ -697,7 +697,7 @@ static void draw_url_screen()
     }
     draw_text("OPTIONS — добавить ссылку    O — назад", MARGIN_X, 970, C_DIM, C_BG);
     draw_text(fit(g_fileNotice, 112), MARGIN_X, 930, C_AMBER, C_BG);
-    draw_text("HTTP/HTTPS .torrent и перенаправления; magnet пока не поддерживается.", MARGIN_X, 1010, C_AMBER, C_BG);
+    draw_text("HTTP/HTTPS .torrent, magnet (HTTP/UDP trackers; без DHT).", MARGIN_X, 1010, C_AMBER, C_BG);
 }
 
 static void draw_all()
