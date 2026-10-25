@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <dirent.h>
+#include <sys/stat.h>
 #include <strings.h>
 
 #include <orbis/Pad.h>
@@ -606,16 +607,28 @@ static void draw_catalog_screen()
 }
 
  
-static void scan_torrent_dir(const std::string& root)
+// Ищем .torrent не только в корне, но и во вложенных каталогах.
+// Ограничения глубины/числа файлов защищают меню от обхода бесконечных деревьев.
+static void scan_torrent_dir(const std::string& root, int depth = 0)
 {
+    if (g_filePaths.size() >= 500 || depth > 7) return;
     DIR* d = opendir(root.c_str());
     if (!d) return;
     struct dirent* e;
-    while ((e = readdir(d)) != NULL) {
-        if (!e->d_name || e->d_name[0] == '.') continue;
-        size_t n = strlen(e->d_name);
-        if (n < 8 || strcasecmp(e->d_name + n - 8, ".torrent") != 0) continue;
-        g_filePaths.push_back(root + "/" + e->d_name);
+    while ((e = readdir(d)) != NULL && g_filePaths.size() < 500) {
+        const char* name = e->d_name;
+        if (!name || name[0] == '.') continue;
+        std::string path = root + "/" + name;
+        size_t n = strlen(name);
+        if (n >= 8 && strcasecmp(name + n - 8, ".torrent") == 0) {
+            struct stat st;
+            if (stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode)) g_filePaths.push_back(path);
+            continue;
+        }
+        if (depth < 7) {
+            struct stat st;
+            if (stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) scan_torrent_dir(path, depth + 1);
+        }
     }
     closedir(d);
 }
@@ -623,14 +636,15 @@ static void load_torrent_files(bool usb)
 {
     g_filePaths.clear(); g_fileSel = 0;
     if (usb) {
-        for (int i = 0; i < 8; ++i) scan_torrent_dir("/mnt/usb" + std::to_string(i));
+        for (int i = 0; i < 8 && g_filePaths.size() < 500; ++i) scan_torrent_dir("/mnt/usb" + std::to_string(i));
     } else {
-        scan_torrent_dir("/data/pkg/torrents");
-        scan_torrent_dir("/data/ps4tc_client");
+        // /data содержит пользовательские каталоги. Сканируем его с ограничением глубины,
+        // чтобы можно было выбрать файл из нестандартной папки, не только из двух заранее заданных мест.
+        scan_torrent_dir("/data");
     }
     g_fileNotice = g_filePaths.empty()
-        ? (usb ? "На корне подключённых USB-накопителей .torrent не найден" : "Во внутренней памяти .torrent не найден")
-        : "Выбери файл и нажми X — добавить; O — назад";
+        ? (usb ? "На USB не найдено .torrent (поиск во вложенных папках)" : "В доступных папках /data .torrent не найден")
+        : "Найдено " + std::to_string(g_filePaths.size()) + " файлов; X — добавить, O — назад";
 }
 static void draw_add_screen()
 {
