@@ -42,6 +42,8 @@ static HttpResult do_request(const std::string& host, int port, const std::strin
     if (hend == std::string::npos) return r;   // подключились, но не получили даже заголовков
 
     std::string head = resp.substr(0, hend);
+    size_t firstLine = head.find("\r\n");
+    r.headers = firstLine == std::string::npos ? std::string() : head.substr(firstLine + 2);
     r.body = resp.substr(hend + 4);
 
     // "HTTP/1.0 200 OK" -> 200
