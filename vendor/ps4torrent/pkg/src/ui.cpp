@@ -697,7 +697,7 @@ static void draw_url_screen()
     }
     draw_text("OPTIONS — добавить ссылку    ○ — назад", MARGIN_X, 970, C_DIM, C_BG);
     draw_text(fit(g_fileNotice, 112), MARGIN_X, 930, C_AMBER, C_BG);
-    draw_text("Поддерживаются .torrent по HTTP/HTTPS и magnet через HTTP/UDP-трекеры (без DHT).", MARGIN_X, 1010, C_AMBER, C_BG);
+    draw_text("Поддерживаются .torrent по HTTP/HTTPS и magnet через HTTP/UDP-трекеры и DHT.", MARGIN_X, 1010, C_AMBER, C_BG);
 }
 
 static void draw_all()
