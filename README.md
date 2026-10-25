@@ -4,7 +4,7 @@ A controller-first catalog and download manager for PS4 homebrew environments. T
 
 ## Project status
 
-**Bootstrap stage — not a console-ready PKG yet.** This repository currently establishes the integration plan, catalog format, and validation workflow. A successful PS4 package build and on-console test are required before any release is described as working.
+**Integration stage — not a console-ready PKG yet.** The pinned upstream PS4 daemon and controller-client source, license, and runtime assets have been vendored under `vendor/ps4torrent/`. The catalog is still a separate module; source integration is not the same as a successful package build. A successful PS4 package build and on-console test are required before any release is described as working.
 
 ## Intended features
 
