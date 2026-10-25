@@ -1049,7 +1049,7 @@ void ui_pump()
         if (right && g_urlKeyPos + 1 < (int)g_urlKeys.size()) { g_urlKeyPos++; g_redraw = 2; }
         if (step_repeat(up, upSince, upLast, now) && g_urlKeyPos >= cols) { g_urlKeyPos -= cols; g_redraw = 2; }
         if (step_repeat(down, downSince, downLast, now) && g_urlKeyPos + cols < (int)g_urlKeys.size()) { g_urlKeyPos += cols; g_redraw = 2; }
-        if (cross && g_urlText.size() < 500) { g_urlText += g_urlKeys[(size_t)g_urlKeyPos]; g_redraw = 2; }
+        if (cross && g_urlText.size() < 1500) { g_urlText += g_urlKeys[(size_t)g_urlKeyPos]; g_redraw = 2; }
         if (square && !g_urlText.empty()) { g_urlText.erase(g_urlText.size()-1); g_redraw = 2; }
         if (triangle || options) {
             if (api_add_catalog_torrent(g_urlText, "internet-download")) {
