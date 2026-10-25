@@ -563,7 +563,7 @@ static void draw_catalog_screen()
         statusX = BANNER_LEFT + g_bannerW + 28;
     }
     draw_text("КАТАЛОГ", statusX, BANNER_TOP + 40, C_TEXT, C_BG);
-    draw_text("R1 — загрузки   Вверх/вниз — выбор   □ — обновить каталог   ○ — назад",
+    draw_text("R1 — загрузки   Вверх/вниз — выбор   ✕ — добавить   □ — обновить   ○ — назад",
               MARGIN_X, 130, C_DIM, C_BG);
     g_scene->FillRect(0, 165, FRAME_WIDTH, 44, C_HEAD);
     draw_text("Название", MARGIN_X, 194, C_DIM, C_HEAD);
@@ -590,7 +590,7 @@ static void draw_catalog_screen()
         draw_text("Элементов: " + std::to_string(items.size()) +
                   "   |   Выбран: " + fit(items[g_catalogSel].title, 45),
                   MARGIN_X, 930, C_TEXT, C_BG);
-        draw_text("Источник пока только отображается: загрузка включится после проверки поддержки URL демоном.",
+        draw_text("✕ добавляет прямой HTTP .torrent на HDD; magnet/HTTPS пока не поддерживаются.",
                   MARGIN_X, 972, C_AMBER, C_BG);
     }
     put_center(FRAME_WIDTH / 2, "PS4 Torrent Catalog — каталог и загрузки", 1052, C_DIMMER, C_BG);
@@ -917,6 +917,18 @@ void ui_pump()
         }
         if (step_repeat(down, downSince, downLast, now) && g_catalogSel + 1 < (int)catalog.size()) {
             g_catalogSel++; g_redraw = 2;
+        }
+        if (cross && g_catalogSel >= 0 && g_catalogSel < (int)catalog.size()) {
+            const CatalogEntry& entry = catalog[g_catalogSel];
+            if (entry.sourceType != "torrent_url") {
+                logf_("catalog: unsupported source type '%s' for '%s'", entry.sourceType.c_str(), entry.title.c_str());
+            } else if (api_add_catalog_torrent(entry.sourceUri, entry.title)) {
+                logf_("catalog: torrent submitted: %s", entry.title.c_str());
+                refresh_status();
+            } else {
+                logf_("catalog: failed to add '%s': %s", entry.title.c_str(), api_last_error().c_str());
+            }
+            g_redraw = 2;
         }
         if (circle) { g_view = 0; g_redraw = 2; }
         if (square) { catalog_load(); g_redraw = 2; }
