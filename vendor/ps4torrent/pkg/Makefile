@@ -16,7 +16,7 @@ export DOTNET_ROLL_FORWARD := LatestMajor
 TITLE       := ps4torrent client
 TITLE_ID    := BREW00088
 CONTENT_ID  := IV0000-BREW00088_00-PS4TC00000000000
-LIBS        := -lc -lkernel -lc++ -lSceNet -lSceVideoOut -lSceSysmodule -lSceFreeType -lScePad -lSceUserService -lSceSystemService
+LIBS        := -lc -lkernel -lc++ -lSceNet -lSceHttp -lSceSsl -lSceVideoOut -lSceSysmodule -lSceFreeType -lScePad -lSceUserService -lSceSystemService
 EXTRAFLAGS  := -O2
 
 # Версия приложения = версия службы (из ../version.h): приложение сравнивает их при запуске.
