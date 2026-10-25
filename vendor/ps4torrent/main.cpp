@@ -62,6 +62,7 @@
 #include "writer.h"
 #include "bigbuf.h"
 #include "tracker.h"
+#include "magnet.h"
 
 #ifndef USB_BASE
 #define USB_BASE "/mnt/usb"          // /mnt/usb0, /mnt/usb1, ...
@@ -3084,6 +3085,18 @@ static void handle_client(int c)
         }
         queue_cmd("set", arg);
         respond(c, "application/json", "{\"ok\":true}");
+    } else if (path == "/api/magnet") {
+        if (method != "POST") { respond_json_error(c, 405, "Method Not Allowed", "use POST with uri=magnet:?..."); return; }
+        std::string uri = qget(query, "uri");
+        if (uri.empty()) { respond_json_error(c, 400, "Bad Request", "missing magnet URI"); return; }
+        std::string torrentBytes, magnetErr;
+        logf_("magnet: resolving metadata");
+        if (!magnet_resolve(uri, g_peerId, torrentBytes, magnetErr)) {
+            logf_("magnet: resolution failed: %s", magnetErr.c_str());
+            respond_json_error(c, 422, "Unprocessable Entity", magnetErr);
+            return;
+        }
+        handle_add(c, "name=magnet.torrent&drive=internal&start=1", torrentBytes);
     } else if (path == "/api/add") {
         if (method != "POST") { respond_json_error(c, 405, "Method Not Allowed", "use POST with the .torrent file as the body"); return; }
         size_t clen = header_content_length(head);
