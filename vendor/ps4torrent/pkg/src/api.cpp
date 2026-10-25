@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 static const int TIMEOUT_MS = 3000;
 static std::string g_lastErr;
