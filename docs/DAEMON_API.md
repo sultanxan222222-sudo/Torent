@@ -20,6 +20,8 @@ Upstream source reviewed: [sergiopoverony/ps4torrent](https://github.com/sergiop
 | `GET /api/delete?hash=<40-char-hash>&files=1` | Remove and delete that torrent's downloaded files; full hash required. |
 | `POST /api/add?name=<name>.torrent&drive=internal&start=1` | Add a torrent file as the POST body (maximum documented size 1 MiB). `drive=N` selects USB N; `internal` selects console storage. `start=0` adds paused. |
 | `GET /api/config` | Read daemon configuration and version. |
+| `GET /api/files?hash=<hash>` | Retrieve a torrent's file list; documented source requires a valid hexadecimal hash of at least 8 characters. |
+| `GET /api/select?hash=<hash>&skip=<ranges>` | Set selected file ranges; verify exact route and skip semantics against the pinned source before exposing it in the UI. |
 | `GET /api/set?... ` | Update supported configuration fields. |
 | `GET /quit` | Stop the daemon; the UI should not expose this as an ordinary download action. |
 
