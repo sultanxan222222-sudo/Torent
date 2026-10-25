@@ -16,7 +16,7 @@
 - [ ] Add tests for catalog parsing and API response normalization.
 
 ## Stage 2 — PS4 application
-- [ ] Bring the upstream PS4 PKG client source into this repository while preserving GPL notices.
+- [x] Vendor the upstream PS4 PKG client source and required runtime assets while preserving license notices.
 - [ ] Create controller-first catalog and downloads screens.
 - [ ] Add persistent daemon URL and UI preferences.
 - [ ] Integrate the verified daemon adapter.
@@ -25,7 +25,8 @@
 ## Stage 3 — Validation
 - [x] CI validates the sample catalog JSON.
 - [ ] CI verifies source and catalog checks.
-- [ ] Produce PKG only in a job with the PS4 toolchain available.
+- [x] Add `scripts/build_ps4_pkg.sh` to build the real PKG when both required SDKs are installed.
+- [ ] Produce PKG in an environment with the PS4 toolchains available.
 - [ ] Install and test on a real PS4 with the target homebrew setup.
 - [ ] Publish a release only after artifact and smoke-test results are recorded.
 
