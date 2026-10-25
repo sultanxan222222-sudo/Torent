@@ -7,6 +7,7 @@
 #include "i18n.h"
 #include "log.h"
 #include "service.h"
+#include "catalog.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -79,6 +80,8 @@ static Image    g_banner;
 static bool     g_bannerOk = false;
 static int      g_bannerW  = 0;   // ширина на экране при высоте BANNER_H (с сохранением пропорций)
 static uint64_t g_lastRefresh = 0;
+static int g_view = 0; // 0 = downloads, 1 = catalog
+static int g_catalogSel = 0;
 
 enum Modal { MODAL_NONE, MODAL_DELETE, MODAL_QUIT };
 static Modal        g_modal = MODAL_NONE;
@@ -550,8 +553,52 @@ static void draw_svc_panel()
     if (!m2.empty()) put_center_rich(cx, m2, y0 + H - 36, C_TEXT, C_PANEL);
 }
 
+
+static void draw_catalog_screen()
+{
+    g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
+    int statusX = MARGIN_X;
+    if (g_bannerOk) {
+        draw_image(g_banner, BANNER_LEFT, BANNER_TOP, g_bannerW, BANNER_H, C_BG);
+        statusX = BANNER_LEFT + g_bannerW + 28;
+    }
+    draw_text("КАТАЛОГ", statusX, BANNER_TOP + 40, C_TEXT, C_BG);
+    draw_text("R1 — загрузки   Вверх/вниз — выбор   □ — обновить каталог   ○ — назад",
+              MARGIN_X, 130, C_DIM, C_BG);
+    g_scene->FillRect(0, 165, FRAME_WIDTH, 44, C_HEAD);
+    draw_text("Название", MARGIN_X, 194, C_DIM, C_HEAD);
+    const std::vector<CatalogEntry>& items = catalog_items();
+    if (items.empty()) {
+        std::string err = catalog_last_error().empty() ? "Каталог пуст" : catalog_last_error();
+        draw_text(fit(err, 90), MARGIN_X, 280, C_AMBER, C_BG);
+        draw_text("Положи catalog.json в /data/ps4tc_client/ или используй пример из PKG.",
+                  MARGIN_X, 326, C_DIM, C_BG);
+    } else {
+        const int rowY = 220, rowH = 112, visible = 6;
+        if (g_catalogSel >= (int)items.size()) g_catalogSel = (int)items.size() - 1;
+        if (g_catalogSel < 0) g_catalogSel = 0;
+        int top = (g_catalogSel / visible) * visible;
+        for (int i = top; i < (int)items.size() && i < top + visible; ++i) {
+            int y = rowY + (i - top) * rowH;
+            Color bg = (i == g_catalogSel) ? C_SEL : ((i % 2) ? C_ROW2 : C_BG);
+            g_scene->FillRect(MARGIN_X - 8, y - 20, FRAME_WIDTH - 2 * MARGIN_X + 16, rowH - 8, bg);
+            draw_text(fit(items[i].title, 80), MARGIN_X, y + 8, C_TEXT, bg);
+            std::string meta = items[i].category + "  |  " + items[i].platform + "  |  " + items[i].sourceType;
+            draw_text(fit(meta, 100), MARGIN_X, y + 38, C_DIM, bg);
+            draw_text(fit(items[i].description, 112), MARGIN_X, y + 68, C_DIM, bg);
+        }
+        draw_text("Элементов: " + std::to_string(items.size()) +
+                  "   |   Выбран: " + fit(items[g_catalogSel].title, 45),
+                  MARGIN_X, 930, C_TEXT, C_BG);
+        draw_text("Источник пока только отображается: загрузка включится после проверки поддержки URL демоном.",
+                  MARGIN_X, 972, C_AMBER, C_BG);
+    }
+    put_center(FRAME_WIDTH / 2, "PS4 Torrent Catalog — каталог и загрузки", 1052, C_DIMMER, C_BG);
+}
+
 static void draw_all()
 {
+    if (g_view == 1) { draw_catalog_screen(); return; }
     g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
 
     int statusX;
@@ -816,6 +863,7 @@ bool ui_init()
     g_padOk = pad_init();
     logf_("ui: ready, cell width %d, visible rows %d, pad %s", g_cellW, VISIBLE, g_padOk ? "ok" : "FAILED");
 
+    catalog_load();
     g_lastTick = sceKernelGetProcessTime();
     g_lastRefresh = 0;
     g_ready = true;
@@ -851,12 +899,28 @@ void ui_pump()
     bool triangle = (pressed & ORBIS_PAD_BUTTON_TRIANGLE) != 0;
     bool square   = (pressed & ORBIS_PAD_BUTTON_SQUARE) != 0;
     bool options  = (pressed & ORBIS_PAD_BUTTON_OPTIONS) != 0;
+    bool r1       = (pressed & ORBIS_PAD_BUTTON_R1) != 0;
 
     static uint64_t upSince = 0, upLast = 0, downSince = 0, downLast = 0;
 
     int n = (int)g_status.items.size();
 
-    if (g_modal == MODAL_DELETE) {
+    if (r1 && g_modal == MODAL_NONE) {
+        g_view = g_view == 0 ? 1 : 0;
+        g_redraw = 2;
+    }
+
+    if (g_view == 1 && g_modal == MODAL_NONE) {
+        const std::vector<CatalogEntry>& catalog = catalog_items();
+        if (step_repeat(up, upSince, upLast, now) && g_catalogSel > 0) {
+            g_catalogSel--; g_redraw = 2;
+        }
+        if (step_repeat(down, downSince, downLast, now) && g_catalogSel + 1 < (int)catalog.size()) {
+            g_catalogSel++; g_redraw = 2;
+        }
+        if (circle) { g_view = 0; g_redraw = 2; }
+        if (square) { catalog_load(); g_redraw = 2; }
+    } else if (g_modal == MODAL_DELETE) {
         upSince = downSince = 0;
         if (cross)       { api_delete(g_modalHash, false); refresh_status(); g_modal = MODAL_NONE; g_redraw = 2; }
         else if (square)  { api_delete(g_modalHash, true);  refresh_status(); g_modal = MODAL_NONE; g_redraw = 2; }
