@@ -583,7 +583,7 @@ static void draw_catalog_screen()
     if (items.empty()) {
         std::string err = catalog_last_error().empty() ? "Каталог пуст" : catalog_last_error();
         draw_text(fit(err, 90), MARGIN_X, 280, C_AMBER, C_BG);
-        draw_text("Положи catalog.json в /data/ps4tc_client/ или используй пример из PKG.",
+        draw_text("Помести catalog.json в /data/ps4tc_client/ или используй пример из пакета.",
                   MARGIN_X, 326, C_DIM, C_BG);
     } else {
         const int rowY = 220, rowH = 112, visible = 6;
@@ -645,28 +645,28 @@ static void load_torrent_files(bool usb)
         scan_torrent_dir("/data");
     }
     g_fileNotice = g_filePaths.empty()
-        ? (usb ? "На USB не найдено .torrent (поиск во вложенных папках)" : "В доступных папках /data .torrent не найден")
-        : "Найдено " + std::to_string(g_filePaths.size()) + " файлов; X — добавить, O — назад";
+        ? (usb ? "На USB-накопителе не найдены .torrent-файлы (проверены вложенные папки)" : "В памяти консоли не найдены .torrent-файлы")
+        : "Найдено файлов: " + std::to_string(g_filePaths.size()) + "; ✕ — добавить, ○ — назад";
 }
 static void draw_add_screen()
 {
     g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
     draw_text("ДОБАВИТЬ ТОРРЕНТ", MARGIN_X, 75, C_TEXT, C_BG);
-    draw_text("Вверх/вниз — выбор   X — открыть   O — назад", MARGIN_X, 125, C_DIM, C_BG);
-    const char* labels[] = {"С USB-флешки", "Из памяти консоли", "Из интернета — ввести HTTP-ссылку", "Открыть каталог источников"};
+    draw_text("Вверх/вниз — выбор   ✕ — открыть   ○ — назад", MARGIN_X, 125, C_DIM, C_BG);
+    const char* labels[] = {"С USB-флешки", "Из памяти консоли", "Из интернета — ввести ссылку", "Открыть каталог источников"};
     for (int i = 0; i < 4; ++i) {
         int y = 240 + i * 105;
         Color bg = i == g_addSel ? C_SEL : (i % 2 ? C_ROW2 : C_BG);
         g_scene->FillRect(MARGIN_X - 8, y - 35, FRAME_WIDTH - 2 * MARGIN_X + 16, 76, bg);
         draw_text(labels[i], MARGIN_X, y + 8, C_TEXT, bg);
     }
-    draw_text("Добавленные торренты появятся в основном списке загрузок.", MARGIN_X, 760, C_DIM, C_BG);
+    draw_text("Добавленные раздачи появятся в основном списке загрузок.", MARGIN_X, 760, C_DIM, C_BG);
 }
 static void draw_file_screen()
 {
     g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
     draw_text("ВЫБОР TORRENT-ФАЙЛА", MARGIN_X, 75, C_TEXT, C_BG);
-    draw_text("Вверх/вниз — выбор   X — добавить в очередь   O — назад", MARGIN_X, 125, C_DIM, C_BG);
+    draw_text("Вверх/вниз — выбор   ✕ — добавить в очередь   ○ — назад", MARGIN_X, 125, C_DIM, C_BG);
     if (g_filePaths.empty()) {
         draw_text(fit(g_fileNotice, 100), MARGIN_X, 250, C_AMBER, C_BG);
     } else {
@@ -685,7 +685,7 @@ static void draw_url_screen()
 {
     g_scene->FillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT, C_BG);
     draw_text("ТОРРЕНТ ПО ССЫЛКЕ", MARGIN_X, 75, C_TEXT, C_BG);
-    draw_text("Ввод с геймпада: X — символ, □ — стереть, △ — добавить", MARGIN_X, 125, C_DIM, C_BG);
+    draw_text("Ввод с геймпада: ✕ — символ, □ — стереть, △ — добавить", MARGIN_X, 125, C_DIM, C_BG);
     draw_text(fit(g_urlText, 112), MARGIN_X, 205, C_TEXT, C_BG);
     const int cols = 9, cellW = 150, cellH = 85, startX = 210, startY = 310;
     for (int i = 0; i < (int)g_urlKeys.size(); ++i) {
@@ -695,9 +695,9 @@ static void draw_url_screen()
         g_scene->FillRect(x, y, cellW - 8, cellH - 8, bg);
         draw_text(std::string(1, g_urlKeys[(size_t)i]), x + 55, y + 48, C_TEXT, bg);
     }
-    draw_text("OPTIONS — добавить ссылку    O — назад", MARGIN_X, 970, C_DIM, C_BG);
+    draw_text("OPTIONS — добавить ссылку    ○ — назад", MARGIN_X, 970, C_DIM, C_BG);
     draw_text(fit(g_fileNotice, 112), MARGIN_X, 930, C_AMBER, C_BG);
-    draw_text("HTTP/HTTPS .torrent, magnet (HTTP/UDP trackers; без DHT).", MARGIN_X, 1010, C_AMBER, C_BG);
+    draw_text("Поддерживаются .torrent по HTTP/HTTPS и magnet через HTTP/UDP-трекеры (без DHT).", MARGIN_X, 1010, C_AMBER, C_BG);
 }
 
 static void draw_all()
@@ -749,7 +749,7 @@ static void draw_all()
         for (size_t i = 0; i < g_status.drives.size(); i++) {
             const Drive& d = g_status.drives[i];
             if (!line.empty()) line += " | ";
-            line += (d.isInternal ? "HDD: " : "USB: ");
+            line += (d.isInternal ? "ПАМЯТЬ: " : "USB: ");
             line += fmt_size(d.freeBytes) + " " + tr("tc_free", "free");
         }
 
@@ -794,7 +794,7 @@ static void draw_all()
         hint = "{updown} " + tr("tc_hint_select", "select") + "   {cross} " + tr("tc_hint_toggle", "pause/resume") + "   {triangle} " + tr("tc_hint_remove", "remove") + "   L1: add torrent   R1: catalog   {options} " + tr("btn_quit", "shut down");
     if (!hint.empty()) put_center_rich(FRAME_WIDTH / 2, hint, HINT_BASELINE, C_DIM, C_BG);
 
-    put_center(FRAME_WIDTH / 2, "ps4torrent client v" APP_VERSION " Created by SergioPoverony and Mr.Claude",
+    put_center(FRAME_WIDTH / 2, "Торрент-клиент PS4 v" APP_VERSION " | Разработчики: SergioPoverony и Mr.Claude",
                CREDIT_BASELINE, C_DIMMER, C_BG);
 
     draw_svc_panel();
@@ -1053,7 +1053,7 @@ void ui_pump()
         if (square && !g_urlText.empty()) { g_urlText.erase(g_urlText.size()-1); g_redraw = 2; }
         if (triangle || options) {
             if (api_add_catalog_torrent(g_urlText, "internet-download")) {
-                g_catalogNotice = "Передано службе загрузки: internet-download";
+                g_catalogNotice = "Передано службе загрузки: ссылка из интернета";
                 refresh_status(); g_view = 0;
             } else g_fileNotice = "Ошибка: " + api_last_error();
             g_redraw = 2;
@@ -1070,7 +1070,7 @@ void ui_pump()
         if (cross && g_catalogSel >= 0 && g_catalogSel < (int)catalog.size()) {
             const CatalogEntry& entry = catalog[g_catalogSel];
             if (entry.sourceType != "torrent_url") {
-                g_catalogNotice = "Этот источник пока не поддерживается: " + entry.sourceType;
+                g_catalogNotice = "Этот тип источника пока не поддерживается: " + entry.sourceType;
                 logf_("catalog: unsupported source type '%s' for '%s'", entry.sourceType.c_str(), entry.title.c_str());
             } else if (api_add_catalog_torrent(entry.sourceUri, entry.title)) {
                 g_catalogNotice = "Передано службе: " + entry.title;
