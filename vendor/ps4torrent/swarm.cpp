@@ -569,7 +569,7 @@ static void* announce_thread(void* arg) {
         for (size_t k = 0; k < job->urls.size(); k++) {
             const std::string& url = job->urls[k];
             AnnounceResult r;
-            if (tracker_announce_http(url, job->infoHash, job->peerId, job->left, r)) {
+            if (tracker_announce(url, job->infoHash, job->peerId, job->left, r)) {
                 logf_("  tracker %s: %d peers", url.c_str(), (int)r.peers.size());
                 job->peers.insert(job->peers.end(), r.peers.begin(), r.peers.end());
             } else {
