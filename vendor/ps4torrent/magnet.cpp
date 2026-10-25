@@ -1,6 +1,7 @@
 #include "magnet.h"
 #include "net.h"
 #include "tracker.h"
+#include "dht.h"
 #include "sha1.h"
 #include "bencode.h"
 #include "log.h"
@@ -255,10 +256,7 @@ bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
         if (supported && std::find(usableTrackers.begin(), usableTrackers.end(), trackers[i]) == usableTrackers.end())
             usableTrackers.push_back(trackers[i]);
     }
-    if (usableTrackers.empty()) {
-        error = "magnet has no supported HTTP/UDP tracker; DHT discovery is not implemented yet";
-        return false;
-    }
+    // Трекеры необязательны: если их нет или они не нашли пиров, используем DHT (BEP 5).
 
     std::vector<Peer> peers;
     for (size_t i = 0; i < usableTrackers.size() && i < 4 && peers.size() < 80; ++i) {
@@ -274,32 +272,69 @@ bool magnet_resolve(const std::string& uri, const unsigned char peerId[20],
             if (!duplicate) peers.push_back(ar.peers[j]);
         }
     }
-    if (peers.empty()) {
-        error = "trackers returned no peers; magnet metadata could not be found";
-        return false;
-    }
 
     std::string info;
-    for (size_t i = 0; i < peers.size() && i < 10; ++i) {
-        if (metadata_from_peer(peers[i], infoHash, peerId, info)) {
-            std::string announce = usableTrackers[0];
-            torrentBytes = "d8:announce" + std::to_string(announce.size()) + ":" + announce;
+    // Сначала пробуем пиров, найденных трекерами.
+    size_t attempted = 0;
+    for (; attempted < peers.size() && attempted < 12; ++attempted) {
+        if (!metadata_from_peer(peers[attempted], infoHash, peerId, info)) continue;
+        std::string announce = usableTrackers.empty() ? std::string() : usableTrackers[0];
+        torrentBytes = "d";
+        if (!announce.empty()) {
+            torrentBytes += "8:announce" + std::to_string(announce.size()) + ":" + announce;
             if (usableTrackers.size() > 1) {
                 torrentBytes += "13:announce-listl";
-                for (size_t ti = 0; ti < usableTrackers.size(); ++ti) {
-                    torrentBytes += "l" + std::to_string(usableTrackers[ti].size()) +
-                                    ":" + usableTrackers[ti] + "e";
-                }
+                for (size_t ti = 0; ti < usableTrackers.size(); ++ti)
+                    torrentBytes += "l" + std::to_string(usableTrackers[ti].size()) + ":" + usableTrackers[ti] + "e";
                 torrentBytes += "e";
             }
-            torrentBytes += "4:info" + info + "e";
-            error.clear();
-            logf_("magnet: metadata resolved from peer %u.%u.%u.%u:%u (%u bytes)",
-                  peers[i].ip[0], peers[i].ip[1], peers[i].ip[2], peers[i].ip[3],
-                  peers[i].port, (unsigned)info.size());
-            return true;
+        }
+        torrentBytes += "4:info" + info + "e";
+        error.clear();
+        logf_("magnet: metadata resolved from tracker peer %u.%u.%u.%u:%u (%u bytes)",
+              peers[attempted].ip[0], peers[attempted].ip[1], peers[attempted].ip[2], peers[attempted].ip[3],
+              peers[attempted].port, (unsigned)info.size());
+        return true;
+    }
+
+    // DHT — основной запасной источник; работает даже у magnet без параметра tr=.
+    {
+        std::vector<Peer> dhtPeers;
+        std::string dhtError;
+        if (dht_get_peers(infoHash, peerId, dhtPeers, dhtError)) {
+            for (size_t j = 0; j < dhtPeers.size() && peers.size() < 100; ++j) {
+                bool duplicate = false;
+                for (size_t k = 0; k < peers.size(); ++k)
+                    if (peers[k].port == dhtPeers[j].port && memcmp(peers[k].ip, dhtPeers[j].ip, 4) == 0) { duplicate = true; break; }
+                if (!duplicate) peers.push_back(dhtPeers[j]);
+            }
+        } else {
+            logf_("magnet: DHT lookup: %s", dhtError.c_str());
         }
     }
-    error = "could not obtain verified metadata from peers (tracker peers may not support BEP 10/ut_metadata)";
+
+    for (size_t i = attempted; i < peers.size() && i < 24; ++i) {
+        if (!metadata_from_peer(peers[i], infoHash, peerId, info)) continue;
+        std::string announce = usableTrackers.empty() ? std::string() : usableTrackers[0];
+        torrentBytes = "d";
+        if (!announce.empty()) {
+            torrentBytes += "8:announce" + std::to_string(announce.size()) + ":" + announce;
+            if (usableTrackers.size() > 1) {
+                torrentBytes += "13:announce-listl";
+                for (size_t ti = 0; ti < usableTrackers.size(); ++ti)
+                    torrentBytes += "l" + std::to_string(usableTrackers[ti].size()) + ":" + usableTrackers[ti] + "e";
+                torrentBytes += "e";
+            }
+        }
+        torrentBytes += "4:info" + info + "e";
+        error.clear();
+        logf_("magnet: metadata resolved from DHT/peer %u.%u.%u.%u:%u (%u bytes)",
+              peers[i].ip[0], peers[i].ip[1], peers[i].ip[2], peers[i].ip[3],
+              peers[i].port, (unsigned)info.size());
+        return true;
+    }
+    error = peers.empty()
+        ? "трекеры и DHT не нашли пиров; проверь подключение к интернету и попробуй позже"
+        : "не удалось получить метаданные от пиров: они могут не поддерживать BEP 10/ut_metadata";
     return false;
 }
