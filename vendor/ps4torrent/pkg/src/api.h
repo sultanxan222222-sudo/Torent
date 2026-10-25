@@ -24,5 +24,8 @@ bool api_quit();
 // HTTPS, magnet-ссылки и HTTP-перенаправления пока не поддерживаются.
 bool api_add_catalog_torrent(const std::string& uri, const std::string& title);
 
+// Добавить локальный .torrent из USB или памяти консоли.
+bool api_add_torrent_file(const std::string& path);
+
 // Последняя ошибка от сервера (для подсказки на экране), пусто если её не было.
 std::string api_last_error();
