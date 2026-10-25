@@ -4,6 +4,7 @@
 struct HttpResult {
     bool connected = false;    // удалось ли вообще подключиться
     int status = 0;            // код ответа (200, 404, ...), 0 если не дошло до ответа
+    std::string headers;          // response headers, excluding the status line
     std::string body;
 };
 
