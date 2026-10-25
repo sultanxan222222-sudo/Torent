@@ -21,3 +21,8 @@ bool tracker_announce_http(const std::string& url, const unsigned char infoHash[
 
 // Порт, который сообщаем трекеру (на него пиры смогут к нам подключаться).
 void tracker_set_port(int port);
+
+// Dispatch HTTP and UDP tracker announces by URL scheme.
+bool tracker_announce(const std::string& url, const unsigned char infoHash[20],
+                      const unsigned char peerId[20], uint64_t left,
+                      AnnounceResult& res);
