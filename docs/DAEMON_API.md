@@ -1,6 +1,6 @@
 # Verified daemon API contract
 
-Upstream source reviewed: [sergiopoverony/ps4torrent](https://github.com/sergiopoverony/ps4torrent), branch `main`, README and Russian user guide. This is a preliminary contract from documentation; response examples and edge cases still need source-level verification and runtime testing.
+Upstream source reviewed: [sergiopoverony/ps4torrent](https://github.com/sergiopoverony/ps4torrent), branch `main`, README and Russian user guide. The `/api/add` route and body handling have now been inspected in the pinned source. Runtime behavior still needs a PS4 build and console test.
 
 ## Connection
 
@@ -32,9 +32,9 @@ Documented successful and error responses use JSON such as `{"ok":true}` and `{"
 1. Query `/status` before showing the service as connected.
 2. Treat a timeout, non-2xx response, invalid JSON, or `ok:false` as an error state.
 3. After pause/resume/delete, refresh `/status` and display the daemon's returned state.
-4. For add, send the actual .torrent file bytes as the request body; a magnet URI is **not** accepted by the documented `/api/add` endpoint.
-5. Do not implement magnet add until the pinned daemon source explicitly confirms a supported endpoint.
-6. Do not allow catalog-provided URLs to change the daemon base URL or inject auth tokens.
+4. For add, send the actual .torrent file bytes as the request body; `/api/add` validates the torrent and stores it for the daemon's normal scanner. A magnet URI is **not** accepted by this endpoint.
+5. The current catalog client supports direct `http://` URLs returning a `.torrent` body, then POSTs those bytes to the local daemon. HTTPS, redirects, and magnet links are not supported in this first integration; the UI must report this clearly.
+6. Do not allow catalog-provided URLs to change the daemon base URL or inject auth tokens. Catalog source URLs are only used for the remote fetch.
 
 ## Source reference
 
@@ -42,4 +42,4 @@ Documented successful and error responses use JSON such as `{"ok":true}` and `{"
 - Upstream README: `README.md`
 - Source repository: https://github.com/sergiopoverony/ps4torrent
 
-This is documentation-based, not yet verified by a live PS4 daemon. Before release, pin an upstream commit and test each operation against that exact build.
+The source route has been reviewed, but the new catalog-to-daemon path has not yet been compiled with the PS4 toolchain or tested on console.
