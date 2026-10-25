@@ -1,0 +1,85 @@
+name: Build PS4 PKG
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "vendor/ps4torrent/**"
+      - "scripts/build_ps4_pkg.sh"
+      - ".github/workflows/build-ps4-pkg.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make clang-18 lld-18 curl unzip tar python3
+          sudo ln -sf /usr/bin/clang-18 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-18 /usr/local/bin/clang++
+          sudo ln -sf /usr/bin/ld.lld-18 /usr/local/bin/ld.lld
+
+      - name: Install .NET runtime
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install OpenOrbis PS4 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/openorbis"
+          curl -fL --retry 3 \
+            https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/v0.5.4/toolchain-llvm-18.tar.gz \
+            -o "$RUNNER_TEMP/openorbis.tar.gz"
+          tar -xzf "$RUNNER_TEMP/openorbis.tar.gz" -C "$RUNNER_TEMP/openorbis"
+          TOOLCHAIN_ROOT="$(find "$RUNNER_TEMP/openorbis" -type f -name link.x -printf '%h\n' | head -n 1)"
+          if [[ -z "$TOOLCHAIN_ROOT" ]]; then
+            echo "OpenOrbis archive did not contain link.x" >&2
+            find "$RUNNER_TEMP/openorbis" -maxdepth 3 -type f | head -n 50
+            exit 1
+          fi
+          echo "OO_PS4_TOOLCHAIN=$TOOLCHAIN_ROOT" >> "$GITHUB_ENV"
+          echo "PATH=$TOOLCHAIN_ROOT/bin/linux:$PATH" >> "$GITHUB_ENV"
+          echo "Toolchain root: $TOOLCHAIN_ROOT"
+
+      - name: Install PS4 payload SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            https://github.com/ps4-payload-dev/sdk/releases/latest/download/ps4-payload-sdk.zip \
+            -o "$RUNNER_TEMP/ps4-payload-sdk.zip"
+          sudo unzip -q "$RUNNER_TEMP/ps4-payload-sdk.zip" -d /opt
+          if [[ ! -f /opt/ps4-payload-sdk/toolchain/orbis.mk ]]; then
+            echo "PS4 payload SDK archive did not install to /opt/ps4-payload-sdk" >&2
+            find /opt -maxdepth 4 -name orbis.mk -print
+            exit 1
+          fi
+          echo "PS4_PAYLOAD_SDK=/opt/ps4-payload-sdk" >> "$GITHUB_ENV"
+
+      - name: Build daemon and PKG
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build_ps4_pkg.sh
+
+      - name: Upload PKG and build outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: torent-ps4-pkg
+          path: |
+            vendor/ps4torrent/pkg/*.pkg
+            vendor/ps4torrent/ps4torrentd.elf
+            vendor/ps4torrent/release/ps4torrentd.elf
+          if-no-files-found: error
+          retention-days: 14
