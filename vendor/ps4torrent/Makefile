@@ -14,7 +14,7 @@ else
 endif
 
 ELF ?= ps4torrentd.elf
-SRCS := main.cpp assets.S writer.cpp incoming.cpp log.cpp net.cpp bencode.cpp sha1.cpp torrent.cpp tracker.cpp magnet.cpp storage.cpp download.cpp resume.cpp swarm.cpp lang_gen.cpp lang_gen.S
+SRCS := main.cpp assets.S writer.cpp incoming.cpp log.cpp net.cpp bencode.cpp sha1.cpp torrent.cpp tracker.cpp dht.cpp magnet.cpp storage.cpp download.cpp resume.cpp swarm.cpp lang_gen.cpp lang_gen.S
 CXXFLAGS := -std=c++17 -O2 -Wall
 
 # Сборка с вшитым файлом (для проверки размера и, позже, для PKG):
