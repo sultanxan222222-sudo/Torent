@@ -128,54 +128,112 @@ static std::string query_encode(const std::string& s)
     return out;
 }
 
-bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
+static bool parse_http_url(const std::string& uri, std::string& host, int& port, std::string& path)
 {
     const std::string prefix = "http://";
-    if (uri.compare(0, prefix.size(), prefix) != 0) {
-        g_lastErr = "only direct http:// .torrent URLs are supported; HTTPS and magnet are not supported yet";
-        return false;
-    }
+    if (uri.compare(0, prefix.size(), prefix) != 0) return false;
     std::string rest = uri.substr(prefix.size());
-    size_t slash = rest.find('/');
-    size_t query = rest.find('?');
-    size_t cut = rest.size();
-    if (slash != std::string::npos && slash < cut) cut = slash;
-    if (query != std::string::npos && query < cut) cut = query;
-    std::string hostPort = rest.substr(0, cut);
-    std::string path = cut == rest.size() ? "/" : rest.substr(cut);
-    if (!path.empty() && path[0] == '?') path = "/" + path;
-    if (hostPort.empty() || hostPort.find('@') != std::string::npos || hostPort.find('#') != std::string::npos) {
-        g_lastErr = "invalid catalog URL";
-        return false;
-    }
-    int remotePort = 80;
-    std::string remoteHost = hostPort;
+    size_t cut = rest.find_first_of("/?#");
+    std::string hostPort = cut == std::string::npos ? rest : rest.substr(0, cut);
+    path = cut == std::string::npos ? "/" : rest.substr(cut);
+    if (path[0] == '?') path = "/" + path;
+    if (path[0] == '#') path = "/";
+    size_t fragment = path.find('#');
+    if (fragment != std::string::npos) path.erase(fragment);
+    if (hostPort.empty() || hostPort.find('@') != std::string::npos || hostPort.find(' ') != std::string::npos) return false;
+    port = 80;
+    host = hostPort;
     size_t colon = hostPort.rfind(':');
     if (colon != std::string::npos) {
-        remoteHost = hostPort.substr(0, colon);
-        std::string portText = hostPort.substr(colon + 1);
-        if (portText.empty()) { g_lastErr = "invalid catalog URL port"; return false; }
-        for (size_t i = 0; i < portText.size(); ++i)
-            if (portText[i] < '0' || portText[i] > '9') { g_lastErr = "invalid catalog URL port"; return false; }
-        remotePort = atoi(portText.c_str());
-        if (remotePort < 1 || remotePort > 65535) { g_lastErr = "invalid catalog URL port"; return false; }
+        host = hostPort.substr(0, colon);
+        std::string p = hostPort.substr(colon + 1);
+        if (p.empty()) return false;
+        for (size_t i = 0; i < p.size(); ++i) if (p[i] < '0' || p[i] > '9') return false;
+        port = atoi(p.c_str());
+        if (port < 1 || port > 65535) return false;
     }
-    if (remoteHost.empty() || remoteHost.find(' ') != std::string::npos) {
-        g_lastErr = "invalid catalog URL host";
+    return !host.empty();
+}
+static std::string header_value(const std::string& headers, const std::string& wanted)
+{
+    size_t pos = 0;
+    while (pos < headers.size()) {
+        size_t e = headers.find("\r\n", pos);
+        if (e == std::string::npos) e = headers.size();
+        std::string line = headers.substr(pos, e - pos);
+        size_t colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string key = line.substr(0, colon);
+            for (size_t i = 0; i < key.size(); ++i) key[i] = (char)tolower((unsigned char)key[i]);
+            if (key == wanted) {
+                size_t v = colon + 1;
+                while (v < line.size() && (line[v] == ' ' || line[v] == '\t')) ++v;
+                return line.substr(v);
+            }
+        }
+        pos = e + 2;
+    }
+    return "";
+}
+bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
+{
+    if (uri.compare(0, 8, "magnet:?") == 0) {
+        g_lastErr = "magnet links need metadata exchange, which this daemon does not implement yet";
         return false;
     }
-
-    HttpResult remote = http_get(remoteHost, remotePort, path, 10000);
-    if (!remote.connected || remote.status != 200 || remote.body.empty()) {
-        g_lastErr = !remote.connected ? "cannot connect to catalog URL" :
-                    ("catalog URL returned HTTP " + std::to_string(remote.status));
+    if (uri.compare(0, 8, "https://") == 0) {
+        g_lastErr = "HTTPS transport is not yet implemented in this PS4 build";
         return false;
     }
+    std::string current = uri, remoteHost, remotePath;
+    int remotePort = 80;
+    HttpResult remote;
+    bool gotFile = false;
+    for (int redirects = 0; redirects <= 5; ++redirects) {
+        if (!parse_http_url(current, remoteHost, remotePort, remotePath)) {
+            g_lastErr = "invalid URL (only http:// URLs are currently supported)";
+            return false;
+        }
+        remote = http_get(remoteHost, remotePort, remotePath, 15000);
+        if (!remote.connected) { g_lastErr = "cannot connect to URL host"; return false; }
+        if (remote.status == 301 || remote.status == 302 || remote.status == 303 ||
+            remote.status == 307 || remote.status == 308) {
+            std::string loc = header_value(remote.headers, "location");
+            if (loc.empty()) { g_lastErr = "HTTP redirect has no Location header"; return false; }
+            if (loc.compare(0, 7, "http://") == 0 || loc.compare(0, 8, "https://") == 0) {
+                if (loc.compare(0, 8, "https://") == 0) {
+                    g_lastErr = "server redirected to HTTPS, but HTTPS transport is not yet implemented";
+                    return false;
+                }
+                current = loc;
+            } else if (loc[0] == '/') {
+                current = "http://" + remoteHost;
+                if (remotePort != 80) current += ":" + std::to_string(remotePort);
+                current += loc;
+            } else {
+                size_t slash = remotePath.find('?');
+                std::string base = slash == std::string::npos ? remotePath : remotePath.substr(0, slash);
+                size_t last = base.find_last_of('/');
+                base = last == std::string::npos ? "/" : base.substr(0, last + 1);
+                current = "http://" + remoteHost;
+                if (remotePort != 80) current += ":" + std::to_string(remotePort);
+                current += base + loc;
+            }
+            continue;
+        }
+        if (remote.status != 200 || remote.body.empty()) {
+            g_lastErr = "URL returned HTTP " + std::to_string(remote.status);
+            return false;
+        }
+        gotFile = true;
+        break;
+    }
+    if (!gotFile) { g_lastErr = "too many HTTP redirects (limit is 5)"; return false; }
     if (remote.body.size() > 1024 * 1024) {
         g_lastErr = "torrent file exceeds 1 MiB limit";
         return false;
     }
-    std::string filename = (title.empty() ? "catalog-download" : title) + ".torrent";
+    std::string filename = (title.empty() ? "internet-download" : title) + ".torrent";
     std::string postPath = "/api/add?name=" + query_encode(filename) + "&drive=internal&start=1";
     HttpResult local = http_post(g_host, g_port, with_token(postPath), remote.body, 10000);
     if (!local.connected || local.status != 200) {
@@ -191,7 +249,6 @@ bool api_add_catalog_torrent(const std::string& uri, const std::string& title)
     g_lastErr.clear();
     return true;
 }
-
 
 bool api_add_torrent_file(const std::string& path)
 {
