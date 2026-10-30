@@ -595,7 +595,11 @@ static bool start_announce(const Torrent& t, const unsigned char peerId[20], uin
     std::shared_ptr<AnnounceJob> job(new AnnounceJob());
     for (size_t k = 0; k < t.trackers.size(); k++) {
         const std::string& url = t.trackers[k];
-        if (url.compare(0, 7, "http://") != 0) continue;
+        // HTTP и UDP tracker поддерживаются tracker.cpp. Не отбрасываем UDP:
+        // иначе magnet/.torrent с udp:// трекерами незаметно теряли весь этот источник пиров.
+        const bool httpTracker = url.compare(0, 7, "http://") == 0;
+        const bool udpTracker = url.compare(0, 6, "udp://") == 0;
+        if (!httpTracker && !udpTracker) continue;
         // адреса локальной сети провайдера (retracker.local) не разрешаются
         if (url.find(".local") != std::string::npos) continue;
         job->urls.push_back(url);
