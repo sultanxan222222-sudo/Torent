@@ -17,10 +17,6 @@ static const char* PAYLOAD_PATH = "/app0/assets/misc/ps4torrentd.elf";
 //  - AUTORUN_ELF_PATH: под этим путём приложение реально может писать (fopen/mkdir); "/user/data/payloads/..." из
 //    песочницы приложения для записи недоступен;
 //  - AUTORUN_INI_ENTRY: этот путь (с "/user") GoldHEN ожидает в секции [AutoRun] файла payloads.ini.
-static const char* AUTORUN_ELF_PATH  = "/data/payloads/ps4torrentd.elf";
-static const char* AUTORUN_INI_ENTRY = "/user/data/payloads/ps4torrentd.elf";
-static const char* AUTORUN_INI_PATH  = "/data/GoldHEN/payloads.ini";
-
 static bool read_payload(std::string& data, std::string& err)
 {
     FILE* f = fopen(PAYLOAD_PATH, "rb");
@@ -30,55 +26,6 @@ static bool read_payload(std::string& data, std::string& err)
     while ((n = fread(buf, 1, sizeof(buf), f)) > 0) data.append(buf, n);
     fclose(f);
     if (data.size() < 1024) { err = "payload file is empty"; return false; }
-    return true;
-}
-
-bool service_install_autorun(std::string& err)
-{
-    std::string data;
-    if (!read_payload(data, err)) return false;
-
-    mkdir("/data/payloads", 0777);   // если папка уже есть, mkdir вернёт ошибку: это не страшно
-    FILE* out = fopen(AUTORUN_ELF_PATH, "wb");
-    if (!out) { err = std::string("cannot write ") + AUTORUN_ELF_PATH; logf_("autorun: %s", err.c_str()); return false; }
-    size_t wn = fwrite(data.data(), 1, data.size(), out);
-    fclose(out);
-    if (wn != data.size()) { err = "autorun payload write incomplete"; logf_("autorun: %s", err.c_str()); return false; }
-
-    std::string ini;
-    FILE* fi = fopen(AUTORUN_INI_PATH, "rb");
-    if (fi) {
-        char ibuf[4096];
-        size_t rn;
-        while ((rn = fread(ibuf, 1, sizeof(ibuf), fi)) > 0) ini.append(ibuf, rn);
-        fclose(fi);
-    }
-
-    // Строка про наш файл уже есть (с любым значением, "= 1" или "= 0" и с любым путём): это осознанный выбор
-    // пользователя, файл ini не трогаем (никаких дублей).
-    if (ini.find("ps4torrentd.elf") != std::string::npos) {
-        logf_("autorun: payload copied, payloads.ini already lists ps4torrentd.elf - leaving it as is");
-        return true;
-    }
-
-    std::string entry = std::string(AUTORUN_INI_ENTRY) + " = 1\n";
-    size_t sec = ini.find("[AutoRun]");
-    if (sec == std::string::npos) {
-        if (!ini.empty() && ini.back() != '\n') ini += "\n";
-        if (!ini.empty()) ini += "\n";
-        ini += "[AutoRun]\n";
-        ini += entry;
-    } else {
-        size_t lineEnd = ini.find('\n', sec);
-        if (lineEnd == std::string::npos) { ini += "\n"; lineEnd = ini.size() - 1; }   // [AutoRun] последняя строка без перевода строки
-        ini.insert(lineEnd + 1, entry);
-    }
-
-    FILE* fw = fopen(AUTORUN_INI_PATH, "wb");
-    if (!fw) { err = std::string("cannot write ") + AUTORUN_INI_PATH; logf_("autorun: %s", err.c_str()); return false; }
-    fwrite(ini.data(), 1, ini.size(), fw);
-    fclose(fw);
-    logf_("autorun: payload installed and registered in payloads.ini (%s)", AUTORUN_INI_ENTRY);
     return true;
 }
 
