@@ -26,7 +26,7 @@
   "tc_no_payload": "СЛУЖБА НЕ ЗАПУЩЕНА",
   "tc_no_internet": "НЕТ ПОДКЛЮЧЕНИЯ К ИНТЕРНЕТУ",
   "tc_free": "свободно",
-  "tc_empty": "Раздач пока нет. Поместите .torrent на USB-накопитель или в /data/pkg/torrents",
+  "tc_empty": "Загрузок пока нет. Поместите .torrent на USB-накопитель или в /data/Download",
   "tc_waiting": "Ожидаем ответ от службы загрузок...",
   "tc_u_gb": "ГБ",
   "tc_u_mb": "МБ",
