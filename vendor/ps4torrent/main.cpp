@@ -137,7 +137,7 @@ extern const unsigned char ps4_notify_start[], ps4_notify_end[];
 #define DEV_DIR "/dev"                          // где лежат устройства (только для диагностики)
 #endif
 #ifndef INTERNAL_ROOT
-#define INTERNAL_ROOT "/data/pkg/torrents"       // место хранения во внутренней памяти консоли (системный установщик видит /data/pkg)
+#define INTERNAL_ROOT "/data/Download"            // единая пользовательская папка загрузок во внутренней памяти PS4
 #endif
 #ifndef LOW_FREE_USB_BYTES
 #define LOW_FREE_USB_BYTES (2ull << 30)          // меньше этого на флешке: предупреждаем (2 ГБ)
@@ -255,6 +255,17 @@ static bool make_dirs(const std::string& p)
     mkdir(p.c_str(), 0777);
     struct stat sb;
     return stat(p.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode);
+}
+
+// Стандартная структура пользовательской медиатеки VAYNAX TORRENT.
+// Каталоги создаются только внутри собственного /data/Download.
+static bool make_internal_layout()
+{
+    if (!make_dirs(INTERNAL_ROOT)) return false;
+    const char* folders[] = { "Games", "Movies", "Series", "Other" };
+    for (size_t i = 0; i < sizeof(folders) / sizeof(folders[0]); ++i)
+        if (!make_dirs(INTERNAL_ROOT + std::string("/") + folders[i])) return false;
+    return true;
 }
 
 static bool is_dir(const std::string& p)
@@ -2773,7 +2784,7 @@ static void handle_add(int c, const std::string& query, const std::string& body)
     std::string want = qget(query, "drive");
     bool useInternal = (want == "internal") || (want.empty() && g_saveTo.load() == 1);
     if (useInternal) {
-        make_dirs(INTERNAL_ROOT);                      // папка создаётся при первом использовании
+        make_internal_layout();                     // папка и четыре раздела создаются при первом использовании
         if (!is_dir(INTERNAL_ROOT)) { respond_json_error(c, 500, "Error", "cannot create the folder in the console memory"); return; }
         root = INTERNAL_ROOT;
     } else {
@@ -3348,7 +3359,7 @@ static void apply_set(const std::string& arg)
     if (!rsv.empty()) { g_resumeSession = (rsv == "1"); logf_("settings: resume_session=%s", rsv.c_str()); }
     if (!sv.empty()) {
         g_saveTo = (sv == "internal") ? 1 : 0;
-        if (g_saveTo.load() == 1) { make_dirs(INTERNAL_ROOT); g_rescan = true; }     // папка создаётся при первом выборе
+        if (g_saveTo.load() == 1) { make_internal_layout(); g_rescan = true; }     // папка создаётся при первом выборе
         logf_("settings: save_to=%s", sv.c_str());
     }
     if (!as.empty()) { g_autostart = (as == "1"); logf_("settings: autostart=%d", g_autostart ? 1 : 0); }
@@ -3905,7 +3916,7 @@ int main()
     logf_("process: %s", process_identity().c_str());
     snprintf(g_notifyIcon, sizeof(g_notifyIcon), "http://127.0.0.1:%d/notify.png", HTTP_PORT);      // иконка уведомлений (способ проверен на консоли)
     if (g_resumeSession.load()) load_session();
-    if (g_saveTo.load() == 1) make_dirs(INTERNAL_ROOT);
+    if (g_saveTo.load() == 1) make_internal_layout();
     writer_start();
     if (!http_spawn()) {
         logf_("http: cannot start the web server thread");
