@@ -26,7 +26,7 @@
   "tc_no_payload": "NO PAYLOAD",
   "tc_no_internet": "NO INTERNET",
   "tc_free": "free",
-  "tc_empty": "No torrents yet. Drop a .torrent on the USB drive or in /data/pkg/torrents",
+  "tc_empty": "No downloads yet. Drop a .torrent on USB or in /data/Download",
   "tc_waiting": "Waiting for the first reply from ps4torrentd...",
   "tc_u_gb": "GB",
   "tc_u_mb": "MB",
