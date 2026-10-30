@@ -155,7 +155,7 @@ extern const unsigned char ps4_notify_start[], ps4_notify_end[];
 #define AUTOSTART_DEFAULT 0     // 0: появившиеся раздачи ждут на паузе, пока их не запустит пользователь
 #endif
 #ifndef LISTEN_PORT
-#define LISTEN_PORT 6881         // порт для входящих соединений пиров
+#define LISTEN_PORT 0            // VAYNAX TORRENT: входящие соединения и раздача отключены
 #endif
 #ifndef CONFIG_FILE
 #define CONFIG_FILE "/data/ps4torrent/config.txt"
@@ -428,7 +428,7 @@ static const int MAX_PARALLEL_LIMIT = 25;          // верхний преде�
 static const int CONN_BUDGET = 90;                  // всего исходящих соединений на все закачки вместе (было 90: по журналу сбои памяти начинались при 76-87 соединениях)
 static int g_connsTotal = 0;                        // сколько соединений с пирами открыто сейчас (для строки "alive" в журнале)
 static int g_maxParallel = 3;
-static int g_listenPort = LISTEN_PORT;       // 0 = входящие соединения выключены
+static int g_listenPort = 0;                 // download-only: никогда не слушаем входящие соединения
 static std::atomic<bool> g_autostart(AUTOSTART_DEFAULT != 0);   // запускать ли раздачи сразу (по умолчанию нет)
 static std::atomic<int> g_saveTo(1);         // куда класть торренты, добавленные без явного места: 0 флешка, 1 память консоли (по умолчанию)
 // Что делать с только что добавленным через API торрентом: путь файла -> запускать сразу (true) или оставить на паузе (false).
@@ -484,8 +484,8 @@ static void load_config()
             int v = atoi(val.c_str());
             g_maxParallel = v < 1 ? 1 : (v > MAX_PARALLEL_LIMIT ? MAX_PARALLEL_LIMIT : v);
         } else if (key == "listen_port") {
-            int v = atoi(val.c_str());
-            g_listenPort = (v >= 1024 && v < 65536) ? v : 0;       // 0 или некорректное значение: выключено
+            // Legacy setting is intentionally ignored: this client never accepts peer connections.
+            g_listenPort = 0;
         } else if (key == "web_token") {
             g_token = val;
         } else if (key == "autostart") {
@@ -3357,18 +3357,10 @@ static void apply_set(const std::string& arg)
         if (v >= 1 && v <= MAX_PARALLEL_LIMIT) { g_maxParallel = v; logf_("settings: max_parallel=%d", v); }
     }
     if (!lp.empty()) {
-        int v = atoi(lp.c_str());
-        if ((v == 0 || (v >= 1024 && v <= 65535)) && v != g_listenPort) {
-            incoming_stop();
-            g_listenPort = v;
-            if (v > 0) {
-                int e = 0;
-                if (incoming_start(v, &e)) { tracker_set_port(v); logf_("settings: now listening on port %d", v); }
-                else logf_("settings: cannot listen on port %d (errno %d)", v, e);
-            } else {
-                logf_("settings: incoming connections disabled");
-            }
-        }
+        // Ignore legacy listen_port requests. No incoming peer socket is ever opened.
+        incoming_stop();
+        g_listenPort = 0;
+        logf_("settings: download-only mode; incoming peer connections remain disabled");
     }
     save_config();
 }
