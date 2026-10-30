@@ -782,7 +782,7 @@ static void draw_all()
     ConnState csNow = conn_state(g_status.ok, g_lastOkUs, sceKernelGetProcessTime(), g_status.netIp);
     bool svcDown = (g_svc == SVC_READY && csNow == CONN_NO_PAYLOAD);   // служба была и пропала (выключена, упала)
     if (g_status.items.empty() && g_svc == SVC_READY) {
-        std::string msg = g_status.ok ? tr("tc_empty", "No torrents yet. Drop a .torrent on the USB drive or in /data/pkg/torrents")
+        std::string msg = g_status.ok ? tr("tc_empty", "No torrents yet. Drop a .torrent on USB or in /data/Download")
                                       : (svcDown ? tr("tc_svc_down", "ps4torrentd is not running")
                                                  : tr("tc_waiting", "Waiting for the first reply from ps4torrentd..."));
         put_center(FRAME_WIDTH / 2, msg, 460, svcDown ? C_AMBER : C_DIM, C_BG);
