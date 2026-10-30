@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-static int g_announcePort = 6881;
-void tracker_set_port(int port) { if (port > 0 && port < 65536) g_announcePort = port; }
+static int g_announcePort = 0; // download-only client does not advertise an incoming peer port
+void tracker_set_port(int port) { (void)port; g_announcePort = 0; }
 
 static std::string urlencode(const unsigned char* d, size_t n) {
     static const char* hex = "0123456789ABCDEF";
