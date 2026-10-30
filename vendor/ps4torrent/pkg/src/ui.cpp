@@ -804,7 +804,7 @@ static void draw_all()
         hint = "{updown} " + tr("tc_hint_select", "select") + "   {cross} " + tr("tc_hint_toggle", "pause/resume") + "   {triangle} " + tr("tc_hint_remove", "remove") + "   L1: add torrent   R1: catalog   {options} " + tr("btn_quit", "shut down");
     if (!hint.empty()) put_center_rich(FRAME_WIDTH / 2, hint, HINT_BASELINE, C_DIM, C_BG);
 
-    put_center(FRAME_WIDTH / 2, "Торрент-клиент PS4 v" APP_VERSION " | Разработчики: SergioPoverony и Mr.Claude",
+    put_center(FRAME_WIDTH / 2, "VAYNAX TORRENT v" APP_VERSION " | Основа: ps4torrent",
                CREDIT_BASELINE, C_DIMMER, C_BG);
 
     draw_svc_panel();
