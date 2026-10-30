@@ -411,6 +411,12 @@ static bool on_message(Ctx& x, Conn& c, const unsigned char* m, uint32_t len) {
             size_t byte = 1 + i / 8;
             if (byte < len && (m[byte] & (0x80 >> (i % 8)))) c.has[i] = true;
         }
+    } else if (id == 6 && len >= 13) {
+        // VAYNAX TORRENT is download-only: never read a requested piece from disk
+        // and never send a piece payload to another peer. Explicitly choke peers
+        // that request uploads instead of silently leaving the request unanswered.
+        static const unsigned char choke[5] = {0, 0, 0, 1, 0};
+        c.out.append((const char*)choke, sizeof(choke));
     } else if (id == 7 && len >= 9) {
         return on_block(x, c, get32(m + 1), get32(m + 5), m + 9, len - 9);
     }
