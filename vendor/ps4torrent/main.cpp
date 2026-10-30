@@ -262,7 +262,11 @@ static bool make_dirs(const std::string& p)
 static bool make_internal_layout()
 {
     if (!make_dirs(INTERNAL_ROOT)) return false;
-    const char* folders[] = { "Games", "Movies", "Series", "Other" };
+    // Keep the visible library categories and the engine's working directories
+    // under the same internal root. Existing resume state stays in .state;
+    // do not move or rename any files here because active jobs may reference them.
+    const char* folders[] = { "Games", "Movies", "Series", "Other",
+                              "downloads", "complete", ".state" };
     for (size_t i = 0; i < sizeof(folders) / sizeof(folders[0]); ++i)
         if (!make_dirs(INTERNAL_ROOT + std::string("/") + folders[i])) return false;
     return true;
