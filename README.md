@@ -1,33 +1,30 @@
-# PS4 Torrent Catalog
+# VAYNAX TORRENT
 
-A controller-first catalog and download manager for PS4 homebrew environments. The project is designed to integrate with the existing `ps4torrent` daemon instead of reimplementing its torrent engine.
+A Russian-first, DualShock 4-controlled torrent client and media center for PlayStation 4 homebrew, built by extending the existing PS4 torrent client foundation in this repository.
 
-## Project status
+**Status: active integration work — not yet a verified console-ready release.** The repository contains a vendored PS4 client source snapshot, catalog and daemon integration code, JSON validation, and an OpenOrbis package workflow. A successful documentation or catalog CI check must not be confused with a built or console-tested PKG.
 
-**Integration stage — not a console-ready PKG yet.** The pinned upstream PS4 daemon and controller-client source, license, and runtime assets are vendored under `vendor/ps4torrent/`. The controller catalog now loads JSON and can fetch a direct `http://` `.torrent` URL, then submit the bytes to the existing daemon's `/api/add` endpoint. HTTPS, redirects, and magnet sources are not implemented yet. This code has not been built with the PS4 toolchain or tested on-console.
+## Product goals
 
-## Intended features
+- Real torrent downloads and seeding, with .torrent and Magnet import.
+- Desktop-like browser handoff: select a downloaded .torrent file and open it in VAYNAX TORRENT. This depends on what the PS4 browser/HEN environment permits; an in-app file picker is the required fallback.
+- Full-flag progress indicator: the Chechen-flag-shaped image starts entirely grayscale and progressively becomes its true green, white, and red colors according to actual downloaded bytes.
+- Download queue, pause/resume, peers, speed, ETA, destination selection, and persistent state where supported by the daemon.
+- Media center for user-owned/local films and series on HDD/USB, with playback resume and subtitle/audio selection where supported.
+- Russian-first interface and DualShock 4 navigation.
 
-- Russian-first interface designed for DualShock 4 navigation.
-- JSON catalog with title, category, description, platform, and source metadata; cover-art rendering and catalog search remain to be implemented.
-- Configurable JSON catalog feeds; no hard-coded dependency on one provider.
-- Download queue with progress, speed, pause/resume, and error states through a compatible daemon API.
-- Persistent settings and last-used daemon address.
-- Clear separation between catalog metadata and torrent transport.
+## Existing technical foundation
 
-## Architecture
+The project extends the vendored PS4 torrent client from [sergiopoverony/ps4torrent](https://github.com/sergiopoverony/ps4torrent), pinned at `cf8699046a9711e98cd640982aa18fc00fa88c09`. Original license notices are retained under `vendor/ps4torrent/`.
 
-1. **PS4 UI / PKG** — controller navigation, catalog cards, search, download queue.
-2. **Catalog adapter** — validates JSON feed entries and supports direct HTTP `.torrent` URLs.
-3. **Daemon client** — talks to the existing `ps4torrent` service; API paths must be verified against the exact daemon revision before integration.
-4. **Build & validation** — reproducible OpenOrbis toolchain setup, static checks, package artifact, and explicit build status.
+See:
+- [Product and implementation specification](docs/VAYNAX_SPEC.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Daemon API contract](docs/DAEMON_API.md)
+- [Roadmap](docs/ROADMAP.md)
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), and [catalog/catalog.example.json](catalog/catalog.example.json).
+## Build and release honesty
 
-## Build status
+No release is complete until a real PS4 PKG is produced, its SHA-256 is recorded, and installation/startup plus an actual torrent transfer are tested on a console with the intended homebrew environment. Browser handoff and media codec support also require real-device verification.
 
-No PKG is attached to this initial commit. The OpenOrbis PS4 toolchain is required for a real package build; compiling a desktop mock-up is not a substitute. The CI workflow checks repository structure and catalog JSON validity, and will not claim that a PS4 PKG was produced unless the required toolchain is present.
-
-## Sources and licensing
-
-The torrent engine is intended to be integrated from the upstream [ps4torrent project](https://github.com/sergiopoverony/ps4torrent) after its source revision, API, and license are reviewed. Upstream code and assets must retain their original license notices. Catalog feeds should point to content the operator is authorized to distribute.
+Catalog feeds and torrent sources must be used only for content the operator is authorized to distribute. The application does not bundle game or movie content.
