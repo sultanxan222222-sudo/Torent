@@ -851,14 +851,10 @@ static bool refresh_status()
 
 static bool svc_version_ok() { return g_status.ok && g_status.version == APP_VERSION; }
 
-// Ставит службу: копия в автозапуск GoldHEN (payloads.ini) и отправка ELF из PKG в BinLoader (порт 9090).
-// Сюда попадаем только когда служба не отвечает или отвечает версией, не равной версии приложения. Если служба уже
-// работает нужной версией, ни диск, ни payloads.ini, ни порт 9090 не трогаются.
+// Запускает службу только через уже доступный BinLoader. Не записывает ELF в автозапуск и не меняет payloads.ini.
+// Сюда попадаем только когда служба не отвечает или отвечает другой версией.
 static void svc_send_now(uint64_t now)
 {
-    std::string instErr;
-    if (!service_install_autorun(instErr)) logf_("svc: autorun install failed: %s", instErr.c_str());
-
     std::string err;
     bool connectFailed = false;
     if (service_send_payload(err, &connectFailed)) {
