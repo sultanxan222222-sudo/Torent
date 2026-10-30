@@ -33,5 +33,17 @@ class ProductInvariantTests(unittest.TestCase):
         self.assertIn('flagRed', UI)
 
 
+    def test_outbound_peer_protocol_never_advertises_or_uploads_pieces(self):
+        # The only queued peer messages are handshake, interested, request, and choke.
+        # In particular, never advertise HAVE/BITFIELD, send UNCHOKE, or send PIECE.
+        self.assertIn('req[4] = 6;', SWARM)
+        self.assertIn('interested[5] = {0, 0, 0, 1, 2}', SWARM)
+        self.assertIn('choke[5] = {0, 0, 0, 1, 0}', SWARM)
+        self.assertNotIn('piece[4] = 7', SWARM)
+        self.assertNotIn('have[4] = 4', SWARM)
+        self.assertNotIn('bitfield[4] = 5', SWARM)
+        self.assertNotIn('unchoke[5] = {0, 0, 0, 1, 1}', SWARM)
+
+
 if __name__ == "__main__":
     unittest.main()
