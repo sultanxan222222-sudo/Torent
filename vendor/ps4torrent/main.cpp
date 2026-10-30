@@ -2059,7 +2059,7 @@ button:disabled{opacity:.55;cursor:default}
 #cfg select{background:var(--card);color:var(--fg);border:1px solid var(--mut);border-radius:6px;padding:3px 6px}
 #cfg input{width:70px;background:transparent;color:var(--fg);border:1px solid var(--mut);border-radius:6px;padding:3px 6px}
 </style></head><body>
-<header><a class="logo" href="/"><img src="/logo.png" alt="ps4torrent"></a><span class="mut" id="sum"></span>
+<header><a class="logo" href="/"><img src="/logo.png" alt="VAYNAX TORRENT"></a><span class="mut" id="sum"></span>
 <label class="btn"><span data-i18n="btn_add">+ .torrent</span><input id="up" type="file" accept=".torrent" multiple hidden></label>
 <button id="allgo" data-i18n="btn_startall">start all</button><button id="allstop" data-i18n="btn_pauseall">pause all</button>
 <button id="cfgb" data-i18n="btn_settings">settings</button><button id="quitb" class="dng" data-i18n="btn_quit" data-ititle="quit_title">shut down</button></header>
@@ -2067,7 +2067,6 @@ button:disabled{opacity:.55;cursor:default}
 <div id="msg"></div>
 <div id="cfg" class="c">
 <label><span data-i18n="cfg_parallel">parallel downloads</span> <input id="mp" type="number" min="1" max="25"></label>
-<label><span data-i18n="cfg_port">listen port (0 = off)</span> <input id="lp" type="number" min="0" max="65535"></label>
 <label><input id="as" type="checkbox" style="width:auto"> <span data-i18n="cfg_autostart">start tasks automatically</span></label>
 <label><input id="rs" type="checkbox" style="width:auto"> <span data-i18n="cfg_resume">resume interrupted downloads after a restart</span></label>
 <label><span data-i18n="cfg_language">language</span> <select id="lng"></select></label>
@@ -2638,14 +2637,14 @@ $('cfgb').onclick = function(){
   var p = $('cfg');
   if (p.style.display === 'block') { p.style.display = 'none'; return; }
   api('/api/config').then(function(r){ return r.json(); }).then(function(c){
-    $('mp').value = c.max_parallel; $('lp').value = c.listen_port; $('as').checked = !!c.autostart; $('rs').checked = c.resume_session !== false;
+    $('mp').value = c.max_parallel; $('as').checked = !!c.autostart; $('rs').checked = c.resume_session !== false;
     $('cfgi').textContent = T('cfg_version', c.version);
     fillLangSelect();
     p.style.display = 'block';
   });
 };
 $('cfgs').onclick = function(){
-  api('/api/set?max_parallel=' + encodeURIComponent($('mp').value) + '&listen_port=' + encodeURIComponent($('lp').value) + '&autostart=' + ($('as').checked ? 1 : 0) + '&resume_session=' + ($('rs').checked ? 1 : 0))
+  api('/api/set?max_parallel=' + encodeURIComponent($('mp').value) + '&autostart=' + ($('as').checked ? 1 : 0) + '&resume_session=' + ($('rs').checked ? 1 : 0))
     .then(function(r){ return r.json(); }).then(function(d){ say(d.ok ? T('saved') : (d.error || T('failed')), !d.ok); setTimeout(load, 1500); });
 };
 $('lng').onchange = function(){
