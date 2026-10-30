@@ -32,9 +32,9 @@ extern "C" uint64_t sceKernelGetProcessTime(void);
 #define FRAME_DEPTH      4
 
 static const int FONT_PX   = 26;
-static const int ROW_H     = 40;    // чуть выше, чтобы под строкой поместилась полоска прогресса
-static const int BAR_H     = 4;
-static const int BAR_GAP   = 4;     // отступ снизу строки до полоски (разделяет соседние строки)
+static const int ROW_H     = 52;    // строка включает полноценный флаг-индикатор загрузки
+static const int BAR_H     = 14;    // высота силуэта флага
+static const int BAR_GAP   = 4;     // отступ снизу строки до флага
 static const int MARGIN_X  = 40;
 static const int BANNER_LEFT = 12;   // логотип прижат ближе к левому краю, отдельно от MARGIN_X
 static const int BANNER_TOP = 16;     // отступ сверху для баннера/заголовка
@@ -60,9 +60,8 @@ static const Color C_SEL   = { 72,  82,  96 };    // выделение: сер�
 static const Color C_TEXT  = { 230, 230, 230 };
 static const Color C_DIM   = { 150, 155, 165 };
 static const Color C_DIMMER = { 95,  99,  108 };   // тусклее C_DIM, для титров внизу
-static const Color C_TRACK  = { 55,  59,  68 };    // серая "дорожка" полоски прогресса
-static const Color C_FILL   = { 81, 171, 236 };    // голубая заливка полоски (C_GREEN оставлен для статуса complete)
-static const Color C_GREEN = { 110, 210, 130 };
+static const Color C_TRACK  = { 75,  78,  86 };    // полностью серый флаг до загрузки
+static const Color C_GREEN = {  0, 122,  61 };    // зелёная полоса флага Чеченской Республики
 static const Color C_AMBER = { 235, 180,  80 };
 static const Color C_RED   = { 235, 100, 100 };
 static const Color C_PANEL = { 40,  44,  56 };
@@ -450,8 +449,8 @@ static void draw_row(int vis, int idx)
     else                             snprintf(tmp, sizeof(tmp), "-");
     put_right(COL_PEERS, W_PEERS, tmp, base, C_TEXT, bg);
 
-    // Тонкая полоска прогресса под строкой: от начала названия до правого края колонки Status
-    // (Peers в неё не входит). Серая "дорожка", голубая заливка по проценту.
+    // Полный силуэт флага: сначала весь серый, затем реальные цвета открываются слева направо
+    // строго пропорционально подтверждённому проценту загрузки.
     int barX0 = col_x(COL_NAME);
     int barX1 = col_x(COL_SPEED + W_SPEED);
     int barW = barX1 - barX0;
@@ -461,7 +460,18 @@ static void draw_row(int vis, int idx)
     int barY = top + ROW_H - BAR_GAP - BAR_H;
     g_scene->FillRect(barX0, barY, barW, BAR_H, C_TRACK);
     int fillW = barW * pct / 100;
-    if (fillW > 0) g_scene->FillRect(barX0, barY, fillW, BAR_H, C_FILL);
+    if (fillW > 0) {
+        const int bandH = BAR_H / 3;
+        Color flagGreen = { 0, 122, 61 };
+        Color flagWhite = { 245, 245, 240 };
+        Color flagRed   = { 198,  12, 48 };
+        g_scene->FillRect(barX0, barY, fillW, bandH, flagGreen);
+        g_scene->FillRect(barX0, barY + bandH, fillW, bandH, flagWhite);
+        g_scene->FillRect(barX0, barY + bandH * 2, fillW, BAR_H - bandH * 2, flagRed);
+    }
+    // Тонкая нейтральная окантовка сохраняет читаемость серой и цветной частей.
+    g_scene->FillRect(barX0, barY, barW, 1, C_DIMMER);
+    g_scene->FillRect(barX0, barY + BAR_H - 1, barW, 1, C_DIMMER);
 }
 
 // Делит текст на строки: по \n и по словам, чтобы строка не длиннее maxChars символов.
