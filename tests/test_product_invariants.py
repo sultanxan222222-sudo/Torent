@@ -19,8 +19,14 @@ class ProductInvariantTests(unittest.TestCase):
 
     def test_internal_download_root_is_vaynax_download(self):
         self.assertIn('#define INTERNAL_ROOT "/data/Download"', DAEMON)
-        for folder in ('Games', 'Movies', 'Series', 'Other'):
+        for folder in ('Games', 'Movies', 'Series', 'Other',
+                       'downloads', 'complete', '.state'):
             self.assertIn('"' + folder + '"', DAEMON)
+        # Existing engine paths must remain stable; startup only creates the
+        # missing directories and must not migrate resume data destructively.
+        self.assertIn('return root + "/downloads";', DAEMON)
+        self.assertIn('return root + "/complete";', DAEMON)
+        self.assertIn('return root + "/.state";', DAEMON)
 
     def test_ui_does_not_offer_a_peer_listening_port(self):
         self.assertNotIn('id="lp"', DAEMON)
